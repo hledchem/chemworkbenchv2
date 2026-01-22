@@ -229,3 +229,177 @@ def baseline(
         return baseline_asls(x, y, **kwargs)
     else:
         raise ValueError(f"Unknown baseline method: {method}")
+
+
+# ---------------------------------------------------------------------------
+# Smoothing Functions
+# ---------------------------------------------------------------------------
+
+def _ensure_odd(window: int) -> int:
+    """
+    Ensure window size is odd and >= 3.
+    """
+    if window < 3:
+        return 3
+    if window % 2 == 0:
+        return window + 1
+    return window
+
+
+def smooth_moving_average(
+    x: Sequence[float],
+    y: Sequence[float],
+    window: int = 11,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Moving average smoothing.
+
+    Parameters
+    ----------
+    x : array-like
+    y : array-like
+    window : int
+        Window size (odd, >= 3).
+
+    Returns
+    -------
+    x_arr, y_smooth
+    """
+    x_arr = np.asarray(x)
+    y_arr = np.asarray(y)
+
+    w = _ensure_odd(window)
+    if w > len(y_arr):
+        w = len(y_arr) if len(y_arr) % 2 == 1 else len(y_arr) - 1
+        if w < 3:
+            return x_arr, y_arr
+
+    kernel = np.ones(w) / w
+    y_smooth = np.convolve(y_arr, kernel, mode="same")
+    return x_arr, y_smooth
+
+
+def smooth_gaussian(
+    x: Sequence[float],
+    y: Sequence[float],
+    sigma: float = 1.0,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Gaussian smoothing using a discrete Gaussian kernel.
+
+    Parameters
+    ----------
+    x : array-like
+    y : array-like
+    sigma : float
+        Standard deviation in points.
+
+    Returns
+    -------
+    x_arr, y_smooth
+    """
+    x_arr = np.asarray(x)
+    y_arr = np.asarray(y)
+
+    if sigma <= 0:
+        return x_arr, y_arr
+
+    half_width = int(3 * sigma)
+    size = 2 * half_width + 1
+    idx = np.arange(-half_width, half_width + 1)
+    kernel = np.exp(-0.5 * (idx / sigma) ** 2)
+    kernel /= kernel.sum()
+
+    y_smooth = np.convolve(y_arr, kernel, mode="same")
+    return x_arr, y_smooth
+
+
+def smooth_savitzky_golay(
+    x: Sequence[float],
+    y: Sequence[float],
+    window: int = 11,
+    polyorder: int = 3,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Savitzky–Golay smoothing using a sliding polynomial fit.
+
+    Parameters
+    ----------
+    x : array-like
+    y : array-like
+    window : int
+        Window size (odd, >= polyorder + 2).
+    polyorder : int
+        Polynomial order.
+
+    Returns
+    -------
+    x_arr, y_smooth
+    """
+    x_arr = np.asarray(x)
+    y_arr = np.asarray(y)
+
+    w = _ensure_odd(window)
+    if w <= polyorder:
+        w = polyorder + 2 if (polyorder + 2) % 2 == 1 else polyorder + 3
+
+    n = len(y_arr)
+    if w > n:
+        w = n if n % 2 == 1 else n - 1
+        if w <= polyorder:
+            return x_arr, y_arr
+
+    half = w // 2
+    y_smooth = np.empty_like(y_arr, dtype=float)
+
+    for i in range(n):
+        i_min = max(0, i - half)
+        i_max = min(n, i + half + 1)
+        x_win = x_arr[i_min:i_max]
+        y_win = y_arr[i_min:i_max]
+
+        if len(x_win) <= polyorder:
+            y_smooth[i] = y_arr[i]
+        else:
+            coeffs = np.polyfit(x_win, y_win, polyorder)
+            y_smooth[i] = np.polyval(coeffs, x_arr[i])
+
+    return x_arr, y_smooth
+
+
+# ---------------------------------------------------------------------------
+# Unified Smoothing Wrapper
+# ---------------------------------------------------------------------------
+
+def smooth(
+    x: Sequence[float],
+    y: Sequence[float],
+    method: str = "moving_average",
+    **kwargs,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Unified smoothing wrapper.
+
+    Parameters
+    ----------
+    x : array-like
+    y : array-like
+    method : str
+        One of: "moving_average", "gaussian", "savitzky_golay"
+    kwargs : dict
+        Additional parameters passed to the underlying method.
+
+    Returns
+    -------
+    x_arr, y_smooth
+    """
+    method = method.lower()
+
+    if method == "moving_average":
+        return smooth_moving_average(x, y, **kwargs)
+    elif method == "gaussian":
+        return smooth_gaussian(x, y, **kwargs)
+    elif method == "savitzky_golay":
+        return smooth_savitzky_golay(x, y, **kwargs)
+    else:
+        raise ValueError(f"Unknown smoothing method: {method}")
