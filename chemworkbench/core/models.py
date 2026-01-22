@@ -97,10 +97,13 @@ class PlotLayerConfig(BaseModel):
     plot_type: PlotType
     label: Optional[str] = None
 
+    # Panel index (for multi-panel figures; 0-based)
+    panel: int = 0
+
     # Data
     x: Optional[List[float]] = None
     y: Optional[List[float]] = None
-    # For heatmaps / images / surfaces: z is 2D or flattened
+    # For heatmaps / images / surfaces: z can be 1D or 2D
     z: Optional[Union[List[float], List[List[float]]]] = None
 
     # Error bars
@@ -144,6 +147,12 @@ class PlotConfig(BaseModel):
     # Figure layout
     figsize: Tuple[float, float] = (6.0, 4.0)
     is_3d: bool = False
+
+    # Subplot grid (for multi-panel figures)
+    nrows: int = 1
+    ncols: int = 1
+    sharex: bool = False
+    sharey: bool = False
 
     # Axes options
     x_scale: str = "linear"
