@@ -31,21 +31,62 @@ class MatplotlibEngine:
     def render(plot: PlotConfig):
         apply_default_style()
 
-        if plot.is_3d:
-            fig = plt.figure(figsize=plot.figsize)
-            ax = fig.add_subplot(111, projection="3d")
+        # Multi-panel support
+        if plot.nrows > 1 or plot.ncols > 1:
+            fig, axes = plt.subplots(
+                nrows=plot.nrows,
+                ncols=plot.ncols,
+                figsize=plot.figsize,
+                sharex=plot.sharex,
+                sharey=plot.sharey,
+            )
+            # Normalize axes to a flat list
+            if not isinstance(axes, (list, tuple)):
+                axes = [axes]
+            else:
+                # axes is a 2D array
+                axes = [ax for row in axes for ax in (row if isinstance(row, (list, tuple)) else [row])]
         else:
-            fig, ax = plt.subplots(figsize=plot.figsize)
+            if plot.is_3d:
+                fig = plt.figure(figsize=plot.figsize)
+                axes = [fig.add_subplot(111, projection="3d")]
+            else:
+                fig, ax = plt.subplots(figsize=plot.figsize)
+                axes = [ax]
 
-        ax.set_title(plot.title)
-        ax.set_xlabel(plot.x_label)
-        ax.set_ylabel(plot.y_label)
+        # Apply global title only if single panel
+        if plot.nrows == 1 and plot.ncols == 1:
+            axes[0].set_title(plot.title)
 
         for layer in plot.layers:
+            idx = max(0, min(layer.panel, len(axes) - 1))
+            ax = axes[idx]
+            MatplotlibEngine._configure_axes(ax, plot, layer, is_main=(idx == 0))
             MatplotlibEngine._render_layer(ax, layer)
 
         fig.tight_layout()
         return fig
+
+    @staticmethod
+    def _configure_axes(ax, plot: PlotConfig, layer: PlotLayerConfig, is_main: bool):
+        # Only main panel gets labels if shared axes
+        if is_main or not (plot.sharex or plot.sharey):
+            ax.set_xlabel(plot.x_label)
+            ax.set_ylabel(plot.y_label)
+            if plot.is_3d and plot.z_label:
+                ax.set_zlabel(plot.z_label)
+
+        ax.set_xscale(plot.x_scale)
+        ax.set_yscale(plot.y_scale)
+        if plot.is_3d:
+            ax.set_zscale(plot.z_scale)
+
+        if plot.x_limits:
+            ax.set_xlim(*plot.x_limits)
+        if plot.y_limits:
+            ax.set_ylim(*plot.y_limits)
+        if plot.z_limits and plot.is_3d:
+            ax.set_zlim(*plot.z_limits)
 
     @staticmethod
     def _render_layer(ax, layer: PlotLayerConfig):
