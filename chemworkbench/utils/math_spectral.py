@@ -2,28 +2,27 @@
 math_spectral.py
 
 Universal spectral-domain math utilities for ChemWorkBench v2.
-This module contains pure, vectorized baseline correction functions
-that apply to any 1D spectroscopy technique (UV-Vis, IR, Raman, NMR magnitude,
-MS drift correction, etc.).
+This module contains pure, vectorized functions that apply to any 1D
+spectroscopy technique (UV-Vis, IR, Raman, NMR magnitude, MS, etc.).
 
-All functions follow these rules:
+Design rules:
 - Pure (no side effects)
 - Stateless
-- Vectorized where possible
-- Return new arrays, never mutate inputs
-- Accept numpy arrays or array-like sequences
-- Return (x, baseline) pairs
+- Technique-agnostic
+- Processor-agnostic
+- Non-duplicated (each operation implemented once here)
+- Return new arrays or structured results, never mutate inputs
 """
 
 from __future__ import annotations
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Optional, Dict, Any
 import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
 
 
 # ---------------------------------------------------------------------------
-# Polynomial Baseline
+# Baseline Correction
 # ---------------------------------------------------------------------------
 
 def baseline_polynomial(
@@ -55,10 +54,6 @@ def baseline_polynomial(
     baseline = np.polyval(coeffs, x_arr)
     return x_arr, baseline
 
-
-# ---------------------------------------------------------------------------
-# Rolling Minimum Baseline
-# ---------------------------------------------------------------------------
 
 def baseline_rolling_min(
     x: Sequence[float],
@@ -97,10 +92,6 @@ def baseline_rolling_min(
 
     return x_arr, baseline
 
-
-# ---------------------------------------------------------------------------
-# Rolling Quantile Baseline
-# ---------------------------------------------------------------------------
 
 def baseline_rolling_quantile(
     x: Sequence[float],
@@ -143,10 +134,6 @@ def baseline_rolling_quantile(
     return x_arr, baseline
 
 
-# ---------------------------------------------------------------------------
-# Asymmetric Least Squares Baseline (AsLS)
-# ---------------------------------------------------------------------------
-
 def baseline_asls(
     x: Sequence[float],
     y: Sequence[float],
@@ -176,7 +163,6 @@ def baseline_asls(
     y_arr = np.asarray(y, dtype=float)
     L = len(y_arr)
 
-    # Second difference matrix
     D = sparse.diags([1, -2, 1], [0, -1, -2], shape=(L, L - 2))
     DTD = lam * (D @ D.T)
 
@@ -190,10 +176,6 @@ def baseline_asls(
     baseline = z
     return x_arr, baseline
 
-
-# ---------------------------------------------------------------------------
-# Unified Baseline Wrapper
-# ---------------------------------------------------------------------------
 
 def baseline(
     x: Sequence[float],
@@ -232,7 +214,7 @@ def baseline(
 
 
 # ---------------------------------------------------------------------------
-# Smoothing Functions
+# Smoothing
 # ---------------------------------------------------------------------------
 
 def _ensure_odd(window: int) -> int:
@@ -367,10 +349,6 @@ def smooth_savitzky_golay(
     return x_arr, y_smooth
 
 
-# ---------------------------------------------------------------------------
-# Unified Smoothing Wrapper
-# ---------------------------------------------------------------------------
-
 def smooth(
     x: Sequence[float],
     y: Sequence[float],
@@ -404,8 +382,9 @@ def smooth(
     else:
         raise ValueError(f"Unknown smoothing method: {method}")
 
+
 # ---------------------------------------------------------------------------
-# Normalization Functions
+# Normalization
 # ---------------------------------------------------------------------------
 
 def normalize_max(
@@ -488,10 +467,6 @@ def normalize_area(
     return x_arr, y_arr / area
 
 
-# ---------------------------------------------------------------------------
-# Unified Normalization Wrapper
-# ---------------------------------------------------------------------------
-
 def normalize(
     x: Sequence[float],
     y: Sequence[float],
@@ -524,3 +499,412 @@ def normalize(
         return normalize_area(x, y, **kwargs)
     else:
         raise ValueError(f"Unknown normalization method: {method}")
+
+
+# ---------------------------------------------------------------------------
+# Peak Detection
+# ---------------------------------------------------------------------------
+
+class PeakDetectionResult:
+    """
+    Container for peak detection results.
+
+    Attributes
+    ----------
+    indices : np.ndarray
+        Indices of detected peaks in the original arrays.
+    x : np.ndarray
+        X positions of peaks.
+    y : np.ndarray
+        Y values at peak positions.
+    prominence : np.ndarray or None
+        Estimated prominence for each peak.
+    width : np.ndarray or None
+        Estimated width for each peak (in x units).
+    refined_x : np.ndarray or None
+        Refined peak positions (e.g., quadratic fit), if computed.
+    refined_y : np.ndarray or None
+        Refined peak heights, if computed.
+    metadata : dict
+        Additional information (e.g., method, thresholds).
+    """
+
+    def __init__(
+        self,
+        indices: np.ndarray,
+        x: np.ndarray,
+        y: np.ndarray,
+        prominence: Optional[np.ndarray] = None,
+        width: Optional[np.ndarray] = None,
+        refined_x: Optional[np.ndarray] = None,
+        refined_y: Optional[np.ndarray] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self.indices = indices
+        self.x = x
+        self.y = y
+        self.prominence = prominence
+        self.width = width
+        self.refined_x = refined_x
+        self.refined_y = refined_y
+        self.metadata = metadata or {}
+
+
+def _apply_region(
+    x: np.ndarray,
+    y: np.ndarray,
+    x_min: Optional[float],
+    x_max: Optional[float],
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Apply an optional x-range restriction and return:
+    - mask into original arrays
+    - x_region, y_region
+    """
+    if x_min is None and x_max is None:
+        mask = np.ones_like(x, dtype=bool)
+        return mask, x, y
+
+    mask = np.ones_like(x, dtype=bool)
+    if x_min is not None:
+        mask &= x >= x_min
+    if x_max is not None:
+        mask &= x <= x_max
+
+    return mask, x[mask], y[mask]
+
+
+def _find_local_maxima_indices(y: np.ndarray) -> np.ndarray:
+    """
+    Find indices of simple local maxima: y[i] > y[i-1] and y[i] > y[i+1].
+    """
+    if len(y) < 3:
+        return np.array([], dtype=int)
+
+    # interior points only
+    left = y[1:-1] > y[:-2]
+    right = y[1:-1] > y[2:]
+    mask = left & right
+    return np.where(mask)[0] + 1  # shift by 1 for interior
+
+
+def _filter_by_height(
+    indices: np.ndarray,
+    y: np.ndarray,
+    height: Optional[float],
+    rel_height: Optional[float],
+) -> np.ndarray:
+    """
+    Filter peaks by absolute and/or relative height.
+    """
+    if indices.size == 0:
+        return indices
+
+    y_peaks = y[indices]
+    mask = np.ones_like(indices, dtype=bool)
+
+    if height is not None:
+        mask &= y_peaks >= height
+
+    if rel_height is not None:
+        max_val = np.max(y)
+        mask &= y_peaks >= rel_height * max_val
+
+    return indices[mask]
+
+
+def _estimate_prominence(
+    indices: np.ndarray,
+    y: np.ndarray,
+) -> np.ndarray:
+    """
+    Simple prominence estimate: difference between peak height and
+    minimum of neighboring valleys.
+    """
+    if indices.size == 0:
+        return np.array([], dtype=float)
+
+    n = len(y)
+    prominence = np.zeros_like(indices, dtype=float)
+
+    for i, idx in enumerate(indices):
+        # search left
+        left_min = y[idx]
+        j = idx
+        while j > 0 and y[j] <= y[j - 1]:
+            left_min = min(left_min, y[j - 1])
+            j -= 1
+
+        # search right
+        right_min = y[idx]
+        j = idx
+        while j < n - 1 and y[j] <= y[j + 1]:
+            right_min = min(right_min, y[j + 1])
+            j += 1
+
+        baseline_level = min(left_min, right_min)
+        prominence[i] = y[idx] - baseline_level
+
+    return prominence
+
+
+def _filter_by_prominence(
+    indices: np.ndarray,
+    y: np.ndarray,
+    min_prominence: Optional[float],
+) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    """
+    Filter peaks by minimum prominence.
+    """
+    if indices.size == 0:
+        return indices, None
+
+    prominence = _estimate_prominence(indices, y)
+
+    if min_prominence is None:
+        return indices, prominence
+
+    mask = prominence >= min_prominence
+    return indices[mask], prominence[mask]
+
+
+def _estimate_widths(
+    indices: np.ndarray,
+    x: np.ndarray,
+    y: np.ndarray,
+    rel_height: float = 0.5,
+) -> np.ndarray:
+    """
+    Estimate peak widths at a relative height (e.g., half-height).
+
+    Parameters
+    ----------
+    indices : np.ndarray
+        Peak indices.
+    x : np.ndarray
+    y : np.ndarray
+    rel_height : float
+        Relative height (0–1) at which to estimate width.
+
+    Returns
+    -------
+    widths : np.ndarray
+        Estimated widths in x units.
+    """
+    if indices.size == 0:
+        return np.array([], dtype=float)
+
+    n = len(y)
+    widths = np.zeros_like(indices, dtype=float)
+
+    for i, idx in enumerate(indices):
+        peak_y = y[idx]
+        target = peak_y * rel_height
+
+        # search left
+        j = idx
+        x_left = x[idx]
+        while j > 0 and y[j] > target:
+            j -= 1
+        x_left = x[j]
+
+        # search right
+        j = idx
+        x_right = x[idx]
+        while j < n - 1 and y[j] > target:
+            j += 1
+        x_right = x[j]
+
+        widths[i] = x_right - x_left
+
+    return widths
+
+
+def _quadratic_refine(
+    indices: np.ndarray,
+    x: np.ndarray,
+    y: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Quadratic refinement of peak positions using a 3-point fit
+    around each peak index.
+
+    Returns
+    -------
+    refined_x, refined_y
+    """
+    if indices.size == 0:
+        return np.array([], dtype=float), np.array([], dtype=float)
+
+    refined_x = np.zeros_like(indices, dtype=float)
+    refined_y = np.zeros_like(indices, dtype=float)
+
+    n = len(y)
+    for i, idx in enumerate(indices):
+        if idx == 0 or idx == n - 1:
+            refined_x[i] = x[idx]
+            refined_y[i] = y[idx]
+            continue
+
+        x0, x1, x2 = x[idx - 1], x[idx], x[idx + 1]
+        y0, y1, y2 = y[idx - 1], y[idx], y[idx + 1]
+
+        # Fit quadratic: y = a x^2 + b x + c
+        X = np.array([[x0**2, x0, 1.0],
+                      [x1**2, x1, 1.0],
+                      [x2**2, x2, 1.0]])
+        Y = np.array([y0, y1, y2])
+        try:
+            a, b, c = np.linalg.lstsq(X, Y, rcond=None)[0]
+            if a == 0:
+                refined_x[i] = x1
+                refined_y[i] = y1
+            else:
+                x_peak = -b / (2 * a)
+                y_peak = a * x_peak**2 + b * x_peak + c
+                refined_x[i] = x_peak
+                refined_y[i] = y_peak
+        except np.linalg.LinAlgError:
+            refined_x[i] = x1
+            refined_y[i] = y1
+
+    return refined_x, refined_y
+
+
+def _derivative_peaks(
+    x: np.ndarray,
+    y: np.ndarray,
+) -> np.ndarray:
+    """
+    Derivative-based peak detection: peaks correspond to zero-crossings
+    of the first derivative with negative second derivative.
+
+    Returns
+    -------
+    indices : np.ndarray
+        Estimated peak indices.
+    """
+    if len(y) < 3:
+        return np.array([], dtype=int)
+
+    dy = np.gradient(y, x)
+    d2y = np.gradient(dy, x)
+
+    # zero-crossings of dy from positive to negative
+    sign = np.sign(dy)
+    zero_cross = (sign[:-1] > 0) & (sign[1:] < 0)
+    candidate_indices = np.where(zero_cross)[0] + 1
+
+    # require negative curvature
+    candidate_indices = candidate_indices[d2y[candidate_indices] < 0]
+
+    return candidate_indices
+
+
+def detect_peaks(
+    x: Sequence[float],
+    y: Sequence[float],
+    method: str = "local_maxima",
+    height: Optional[float] = None,
+    rel_height: Optional[float] = None,
+    min_prominence: Optional[float] = None,
+    estimate_width: bool = True,
+    width_rel_height: float = 0.5,
+    x_min: Optional[float] = None,
+    x_max: Optional[float] = None,
+    refine: bool = True,
+    derivative: bool = False,
+) -> PeakDetectionResult:
+    """
+    Advanced peak detection for 1D spectra.
+
+    Parameters
+    ----------
+    x : array-like
+    y : array-like
+    method : str
+        Currently "local_maxima" or "derivative".
+    height : float, optional
+        Absolute minimum peak height.
+    rel_height : float, optional
+        Relative minimum peak height (fraction of max(y)).
+    min_prominence : float, optional
+        Minimum prominence threshold.
+    estimate_width : bool
+        Whether to estimate peak widths.
+    width_rel_height : float
+        Relative height at which to estimate width (e.g., 0.5 for FWHM).
+    x_min : float, optional
+        Minimum x for region-restricted detection.
+    x_max : float, optional
+        Maximum x for region-restricted detection.
+    refine : bool
+        Whether to apply quadratic refinement to peak positions.
+    derivative : bool
+        If True, use derivative-based detection instead of simple local maxima.
+
+    Returns
+    -------
+    PeakDetectionResult
+        Structured peak detection result.
+    """
+    x_arr = np.asarray(x, dtype=float)
+    y_arr = np.asarray(y, dtype=float)
+
+    # Apply region restriction
+    region_mask, x_reg, y_reg = _apply_region(x_arr, y_arr, x_min, x_max)
+
+    # Choose core detection method
+    method = method.lower()
+    if derivative:
+        core_indices_reg = _derivative_peaks(x_reg, y_reg)
+    else:
+        if method == "local_maxima":
+            core_indices_reg = _find_local_maxima_indices(y_reg)
+        else:
+            raise ValueError(f"Unknown peak detection method: {method}")
+
+    # Map region indices back to original indices
+    region_indices = np.where(region_mask)[0]
+    core_indices = region_indices[core_indices_reg]
+
+    # Filter by height
+    core_indices = _filter_by_height(core_indices, y_arr, height, rel_height)
+
+    # Filter by prominence
+    core_indices, prominence = _filter_by_prominence(core_indices, y_arr, min_prominence)
+
+    # Estimate widths
+    widths = None
+    if estimate_width and core_indices.size > 0:
+        widths = _estimate_widths(core_indices, x_arr, y_arr, rel_height=width_rel_height)
+
+    # Quadratic refinement
+    refined_x = None
+    refined_y = None
+    if refine and core_indices.size > 0:
+        refined_x, refined_y = _quadratic_refine(core_indices, x_arr, y_arr)
+
+    # Build result
+    result = PeakDetectionResult(
+        indices=core_indices,
+        x=x_arr[core_indices],
+        y=y_arr[core_indices],
+        prominence=prominence,
+        width=widths,
+        refined_x=refined_x,
+        refined_y=refined_y,
+        metadata={
+            "method": method,
+            "derivative": derivative,
+            "height": height,
+            "rel_height": rel_height,
+            "min_prominence": min_prominence,
+            "estimate_width": estimate_width,
+            "width_rel_height": width_rel_height,
+            "x_min": x_min,
+            "x_max": x_max,
+            "refine": refine,
+        },
+    )
+    return result
