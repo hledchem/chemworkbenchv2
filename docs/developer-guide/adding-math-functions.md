@@ -48,3 +48,11 @@ The baseline correction functions in `math_spectral.py` demonstrate the correct 
 - Exposed through a unified wrapper (`baseline()`)
 
 When adding new spectral math functions, follow the same pattern.
+
+### Example: Adding Smoothing Functions
+
+The smoothing functions in `math_spectral.py` demonstrate:
+
+- How to implement multiple related transforms
+- How to expose them through a unified wrapper (`smooth()`)
+- How to keep functions pure and technique-agnostic
