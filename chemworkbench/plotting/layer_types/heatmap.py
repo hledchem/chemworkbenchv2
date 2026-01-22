@@ -1,6 +1,11 @@
 import numpy as np
 
-def render_heatmap(ax, layer):
+from chemworkbench.core.models import PlotLayerConfig
+
+
+def render_heatmap(ax, layer: PlotLayerConfig):
+    if layer.z is None:
+        return
     data = np.array(layer.z)
     ax.imshow(
         data,
