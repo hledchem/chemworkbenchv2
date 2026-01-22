@@ -1,41 +1,35 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Sequence
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from pydantic import BaseModel, Field
 
 
+# ------------------------------------------------------------
+# Core enums
+# ------------------------------------------------------------
+
 class Technique(str, Enum):
-    """Universal enumeration of analytical techniques.
-
-    This is intentionally broad and future-proof; processors can
-    use this for metadata, routing, or registry purposes.
-    """
-
-    UV_VIS = "uv_vis"
-    NMR = "nmr"
+    UV_VIS = "uvvis"
     IR = "ir"
+    NMR = "nmr"
     RAMAN = "raman"
     CV = "cv"
     EPR = "epr"
     GCMS = "gcms"
     LCMS = "lcms"
-    GENERIC = "generic"
 
 
 class PlotBackend(str, Enum):
-    """Backends supported by the universal plotting engine."""
-
     NONE = "none"
     MATPLOTLIB = "matplotlib"
-    PLOTLY = "plotly"
-    BOKEH = "bokeh"
+    # PLOTLY = "plotly"  # future
+    # BOKEH = "bokeh"    # future
 
 
 class PlotType(str, Enum):
-    """Universal plot types supported across all modalities."""
-
+    # 2D
     LINE = "line"
     SCATTER = "scatter"
     BAR = "bar"
@@ -45,265 +39,165 @@ class PlotType(str, Enum):
     HEATMAP = "heatmap"
     CONTOUR = "contour"
     IMAGE = "image"
-    SURFACE = "surface"
+    PIE = "pie"
+    HISTOGRAM = "histogram"
 
+    # 3D
+    LINE_3D = "line_3d"
+    SCATTER_3D = "scatter_3d"
+    SURFACE_3D = "surface_3d"
+    WIREFRAME_3D = "wireframe_3d"
+
+
+# ------------------------------------------------------------
+# Base processor config
+# ------------------------------------------------------------
+
+class BaseProcessorConfig(BaseModel):
+    """Base configuration shared by all processors."""
+
+    name: str = Field(default="default", description="Human-readable name for this config.")
+    version: str = Field(default="1.0.0", description="Config schema version.")
+
+    # Pipeline toggles
+    enable_load: bool = True
+    enable_validate: bool = True
+    enable_preprocess: bool = True
+    enable_process: bool = True
+    enable_postprocess: bool = True
+    enable_plot: bool = True
+    enable_export: bool = False
+
+    # Extra technique-specific options
+    extra: Dict[str, Any] = Field(default_factory=dict)
+
+    class Config:
+        extra = "ignore"
+
+
+# ------------------------------------------------------------
+# QC metrics
+# ------------------------------------------------------------
+
+class QCMetric(BaseModel):
+    """Quality control metric with description."""
+
+    value: float
+    description: str
+
+
+# ------------------------------------------------------------
+# Plot models
+# ------------------------------------------------------------
 
 class PlotLayerConfig(BaseModel):
-    """Configuration for a single visual layer within a plot.
+    """Configuration for a single plot layer."""
 
-    This is the atomic unit of plotting—each layer can be a line,
-    scatter, bar, etc., with full Excel-level customization.
-    """
+    # Core
+    plot_type: PlotType
+    label: Optional[str] = None
 
-    label: Optional[str] = Field(
-        default=None,
-        description="Legend label for this layer.",
-    )
-    plot_type: PlotType = Field(
-        default=PlotType.LINE,
-        description="Type of plot for this layer.",
-    )
+    # Data
+    x: Optional[List[float]] = None
+    y: Optional[List[float]] = None
+    # For heatmaps / images / surfaces: z is 2D or flattened
+    z: Optional[Union[List[float], List[List[float]]]] = None
 
-    # Data payload: always JSON-serializable sequences
-    x: Optional[Sequence[float]] = Field(
-        default=None,
-        description="X-axis data for this layer.",
-    )
-    y: Optional[Sequence[float]] = Field(
-        default=None,
-        description="Y-axis data for this layer.",
-    )
-    z: Optional[Sequence[Sequence[float]]] = Field(
-        default=None,
-        description="Z data for 2D/3D plots (heatmap, contour, surface).",
-    )
+    # Error bars
+    yerr: Optional[List[float]] = None
+    xerr: Optional[List[float]] = None
 
-    # Visual styling (Excel-level customization)
-    color: Optional[str] = Field(
-        default=None,
-        description="Color spec (hex, named color, etc.).",
-    )
-    linewidth: Optional[float] = Field(
-        default=None,
-        description="Line width for line-like plots.",
-    )
-    linestyle: Optional[str] = Field(
-        default=None,
-        description="Line style (e.g., '-', '--', ':', 'dashdot').",
-    )
-    marker: Optional[str] = Field(
-        default=None,
-        description="Marker style for scatter-like plots.",
-    )
-    markersize: Optional[float] = Field(
-        default=None,
-        description="Marker size for scatter-like plots.",
-    )
-    alpha: Optional[float] = Field(
-        default=None,
-        description="Transparency (0–1).",
-    )
-    zorder: Optional[int] = Field(
-        default=None,
-        description="Drawing order for overlapping layers.",
-    )
-    visible: bool = Field(
-        default=True,
-        description="Whether this layer is visible by default.",
-    )
+    # Styling
+    color: Optional[str] = None
+    linewidth: float = 1.5
+    linestyle: str = "-"
+    marker: Optional[str] = None
+    markersize: Optional[float] = None
+    alpha: float = 1.0
+    cmap: Optional[str] = "viridis"
 
-    # Arbitrary backend-specific options
-    extra: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Backend-specific options (JSON-serializable).",
-    )
+    # Bar / histogram
+    width: Optional[float] = None
+    bins: Optional[int] = None
+    stacked: bool = False
+
+    # Pie
+    labels: Optional[List[str]] = None
+    explode: Optional[List[float]] = None
+    normalize: bool = True
+
+    # 3D
+    is_3d: bool = False
 
 
 class PlotConfig(BaseModel):
-    """Universal plot configuration, independent of backend.
+    """High-level plot configuration, backend-agnostic."""
 
-    The pipeline and processors only ever deal with this model.
-    The plotting engine is responsible for turning this into
-    actual figures for the chosen backend.
-    """
+    id: str
+    title: str = ""
+    x_label: str = ""
+    y_label: str = ""
+    z_label: str = ""
 
-    id: str = Field(
-        ...,
-        description="Unique identifier for this plot within a ProcessedData object.",
-    )
-    title: Optional[str] = Field(
-        default=None,
-        description="Plot title.",
-    )
-    x_label: Optional[str] = Field(
-        default=None,
-        description="X-axis label.",
-    )
-    y_label: Optional[str] = Field(
-        default=None,
-        description="Y-axis label.",
-    )
-    z_label: Optional[str] = Field(
-        default=None,
-        description="Z-axis label (for 3D plots).",
-    )
+    backend: PlotBackend = PlotBackend.NONE
 
-    backend: PlotBackend = Field(
-        default=PlotBackend.NONE,
-        description="Preferred plotting backend.",
-    )
+    # Figure layout
+    figsize: Tuple[float, float] = (6.0, 4.0)
+    is_3d: bool = False
 
-    # Layout and global options
-    show_legend: bool = Field(
-        default=True,
-        description="Whether to show a legend.",
-    )
-    show_grid: bool = Field(
-        default=True,
-        description="Whether to show grid lines.",
-    )
-    x_scale: Literal["linear", "log"] = Field(
-        default="linear",
-        description="Scale for the X-axis.",
-    )
-    y_scale: Literal["linear", "log"] = Field(
-        default="linear",
-        description="Scale for the Y-axis.",
-    )
+    # Axes options
+    x_scale: str = "linear"
+    y_scale: str = "linear"
+    z_scale: str = "linear"
 
-    # Multiple layers per plot
-    layers: List[PlotLayerConfig] = Field(
-        default_factory=list,
-        description="List of visual layers composing this plot.",
-    )
+    x_limits: Optional[Tuple[float, float]] = None
+    y_limits: Optional[Tuple[float, float]] = None
+    z_limits: Optional[Tuple[float, float]] = None
 
-    # Arbitrary layout options (margins, fonts, etc.)
-    layout: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Backend-agnostic layout options (JSON-serializable).",
-    )
+    # Layers
+    layers: List[PlotLayerConfig] = Field(default_factory=list)
+
+    # Extra options for UI/backends
+    extra: Dict[str, Any] = Field(default_factory=dict)
 
 
-class QCMetric(BaseModel):
-    """Single quality-control metric."""
-
-    name: str = Field(
-        ...,
-        description="Name of the QC metric (e.g., 'snr', 'baseline_rms').",
-    )
-    value: float = Field(
-        ...,
-        description="Numeric value of the metric.",
-    )
-    description: Optional[str] = Field(
-        default=None,
-        description="Human-readable description of the metric.",
-    )
-    extra: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Additional metadata for this metric.",
-    )
-
+# ------------------------------------------------------------
+# Processed data + pipeline result
+# ------------------------------------------------------------
 
 class ProcessedData(BaseModel):
-    """Canonical processed data model returned by all processors.
+    """
+    Canonical container for processed numerical data.
 
-    This is the contract between processors, the pipeline, and the UI.
-    Every technique must conform to this schema so the rest of the
-    system can remain stable and generic.
+    This is intentionally flexible and JSON-serializable.
     """
 
-    technique: Technique = Field(
-        default=Technique.GENERIC,
-        description="Analytical technique associated with this data.",
-    )
+    # Core arrays
+    x: Optional[List[float]] = None
+    y: Optional[List[float]] = None
 
-    # Raw and processed payloads
-    raw_data: Any = Field(
-        ...,
-        description="Unmodified input data as received by the processor.",
-    )
-    processed_data: Any = Field(
-        ...,
-        description="Final processed data (arrays, tables, etc.).",
-    )
+    # Raw data
+    x_raw: Optional[List[float]] = None
+    y_raw: Optional[List[float]] = None
 
-    # Metadata and QC
-    metadata: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Technique-specific metadata (JSON-serializable).",
-    )
-    qc: Dict[str, QCMetric] = Field(
-        default_factory=dict,
-        description="Quality-control metrics keyed by metric name.",
-    )
+    # Intermediate arrays (UV-Vis example)
+    baseline: Optional[List[float]] = None
+    y_corrected: Optional[List[float]] = None
+    y_smooth: Optional[List[float]] = None
 
-    # Plotting
-    plots: List[PlotConfig] = Field(
-        default_factory=list,
-        description="List of plot configurations for this dataset.",
-    )
+    # Analysis results
+    peak_results: Optional[Dict[str, Any]] = None
+    integration_results: Optional[Dict[str, Any]] = None
 
-    # Diagnostics
-    warnings: List[str] = Field(
-        default_factory=list,
-        description="Non-fatal issues encountered during processing.",
-    )
-    errors: List[str] = Field(
-        default_factory=list,
-        description="Fatal or near-fatal issues encountered during processing.",
-    )
+    # Technique-specific extras
+    extra: Dict[str, Any] = Field(default_factory=dict)
 
 
-class BaseProcessorConfig(BaseModel):
-    """Universal base configuration for all processors.
+class PipelineResult(BaseModel):
+    """Unified result object returned by the universal pipeline."""
 
-    Technique-specific configs must inherit from this class and
-    add their own fields. All fields must be JSON-serializable
-    and Pydantic-validated so they can be surfaced in the UI.
-    """
-
-    name: str = Field(
-        ...,
-        description="Human-readable name of the processor instance.",
-    )
-    version: str = Field(
-        default="1.0.0",
-        description="Version of the processor implementation.",
-    )
-
-    # Pipeline toggles
-    enable_load: bool = Field(
-        default=True,
-        description="Enable the load step in the pipeline.",
-    )
-    enable_validate: bool = Field(
-        default=True,
-        description="Enable the validate step in the pipeline.",
-    )
-    enable_preprocess: bool = Field(
-        default=True,
-        description="Enable the preprocess step in the pipeline.",
-    )
-    enable_process: bool = Field(
-        default=True,
-        description="Enable the main process step in the pipeline.",
-    )
-    enable_postprocess: bool = Field(
-        default=True,
-        description="Enable the postprocess step in the pipeline.",
-    )
-    enable_plot: bool = Field(
-        default=True,
-        description="Enable plot generation in the pipeline.",
-    )
-    enable_export: bool = Field(
-        default=False,
-        description="Enable export step in the pipeline.",
-    )
-
-    # Arbitrary extra config for future-proofing
-    extra: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Additional processor-specific configuration.",
-    )
+    processed_data: Union[ProcessedData, Dict[str, Any], None] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    qc: Dict[str, QCMetric] = Field(default_factory=dict)
+    plots: List[PlotConfig] = Field(default_factory=list)
+    errors: List[str] = Field(default_factory=list)
