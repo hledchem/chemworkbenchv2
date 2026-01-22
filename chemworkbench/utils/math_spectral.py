@@ -502,6 +502,86 @@ def normalize(
 
 
 # ---------------------------------------------------------------------------
+# Region Integration
+# ---------------------------------------------------------------------------
+
+def integrate_region(
+    x: Sequence[float],
+    y: Sequence[float],
+    x_min: Optional[float] = None,
+    x_max: Optional[float] = None,
+) -> float:
+    """
+    Integrate y over a specified x-range using trapezoidal integration.
+
+    Parameters
+    ----------
+    x : array-like
+        X-axis values.
+    y : array-like
+        Y-axis values.
+    x_min : float, optional
+        Lower bound of integration range. If None, use min(x).
+    x_max : float, optional
+        Upper bound of integration range. If None, use max(x).
+
+    Returns
+    -------
+    area : float
+        Integrated area under the curve in the specified region.
+    """
+    x_arr = np.asarray(x, dtype=float)
+    y_arr = np.asarray(y, dtype=float)
+
+    if x_arr.size == 0:
+        return 0.0
+
+    if x_min is None:
+        x_min = float(x_arr.min())
+    if x_max is None:
+        x_max = float(x_arr.max())
+    if x_min >= x_max:
+        return 0.0
+
+    mask = (x_arr >= x_min) & (x_arr <= x_max)
+    if not np.any(mask):
+        return 0.0
+
+    return float(np.trapz(y_arr[mask], x_arr[mask]))
+
+
+def integrate_regions(
+    x: Sequence[float],
+    y: Sequence[float],
+    regions: Sequence[Tuple[float, float]],
+) -> np.ndarray:
+    """
+    Integrate y over multiple x-ranges.
+
+    Parameters
+    ----------
+    x : array-like
+        X-axis values.
+    y : array-like
+        Y-axis values.
+    regions : sequence of (x_min, x_max)
+        List of integration regions.
+
+    Returns
+    -------
+    areas : np.ndarray
+        Array of integrated areas, one per region.
+    """
+    x_arr = np.asarray(x, dtype=float)
+    y_arr = np.asarray(y, dtype=float)
+
+    areas = np.zeros(len(regions), dtype=float)
+    for i, (x_min, x_max) in enumerate(regions):
+        areas[i] = integrate_region(x_arr, y_arr, x_min=x_min, x_max=x_max)
+    return areas
+
+
+# ---------------------------------------------------------------------------
 # Peak Detection
 # ---------------------------------------------------------------------------
 
@@ -581,11 +661,10 @@ def _find_local_maxima_indices(y: np.ndarray) -> np.ndarray:
     if len(y) < 3:
         return np.array([], dtype=int)
 
-    # interior points only
     left = y[1:-1] > y[:-2]
     right = y[1:-1] > y[2:]
     mask = left & right
-    return np.where(mask)[0] + 1  # shift by 1 for interior
+    return np.where(mask)[0] + 1
 
 
 def _filter_by_height(
@@ -628,14 +707,12 @@ def _estimate_prominence(
     prominence = np.zeros_like(indices, dtype=float)
 
     for i, idx in enumerate(indices):
-        # search left
         left_min = y[idx]
         j = idx
         while j > 0 and y[j] <= y[j - 1]:
             left_min = min(left_min, y[j - 1])
             j -= 1
 
-        # search right
         right_min = y[idx]
         j = idx
         while j < n - 1 and y[j] <= y[j + 1]:
@@ -701,16 +778,12 @@ def _estimate_widths(
         peak_y = y[idx]
         target = peak_y * rel_height
 
-        # search left
         j = idx
-        x_left = x[idx]
         while j > 0 and y[j] > target:
             j -= 1
         x_left = x[j]
 
-        # search right
         j = idx
-        x_right = x[idx]
         while j < n - 1 and y[j] > target:
             j += 1
         x_right = x[j]
@@ -749,7 +822,6 @@ def _quadratic_refine(
         x0, x1, x2 = x[idx - 1], x[idx], x[idx + 1]
         y0, y1, y2 = y[idx - 1], y[idx], y[idx + 1]
 
-        # Fit quadratic: y = a x^2 + b x + c
         X = np.array([[x0**2, x0, 1.0],
                       [x1**2, x1, 1.0],
                       [x2**2, x2, 1.0]])
@@ -790,12 +862,10 @@ def _derivative_peaks(
     dy = np.gradient(y, x)
     d2y = np.gradient(dy, x)
 
-    # zero-crossings of dy from positive to negative
     sign = np.sign(dy)
     zero_cross = (sign[:-1] > 0) & (sign[1:] < 0)
     candidate_indices = np.where(zero_cross)[0] + 1
 
-    # require negative curvature
     candidate_indices = candidate_indices[d2y[candidate_indices] < 0]
 
     return candidate_indices
@@ -851,10 +921,8 @@ def detect_peaks(
     x_arr = np.asarray(x, dtype=float)
     y_arr = np.asarray(y, dtype=float)
 
-    # Apply region restriction
     region_mask, x_reg, y_reg = _apply_region(x_arr, y_arr, x_min, x_max)
 
-    # Choose core detection method
     method = method.lower()
     if derivative:
         core_indices_reg = _derivative_peaks(x_reg, y_reg)
@@ -864,28 +932,22 @@ def detect_peaks(
         else:
             raise ValueError(f"Unknown peak detection method: {method}")
 
-    # Map region indices back to original indices
     region_indices = np.where(region_mask)[0]
     core_indices = region_indices[core_indices_reg]
 
-    # Filter by height
     core_indices = _filter_by_height(core_indices, y_arr, height, rel_height)
 
-    # Filter by prominence
     core_indices, prominence = _filter_by_prominence(core_indices, y_arr, min_prominence)
 
-    # Estimate widths
     widths = None
     if estimate_width and core_indices.size > 0:
         widths = _estimate_widths(core_indices, x_arr, y_arr, rel_height=width_rel_height)
 
-    # Quadratic refinement
     refined_x = None
     refined_y = None
     if refine and core_indices.size > 0:
         refined_x, refined_y = _quadratic_refine(core_indices, x_arr, y_arr)
 
-    # Build result
     result = PeakDetectionResult(
         indices=core_indices,
         x=x_arr[core_indices],
