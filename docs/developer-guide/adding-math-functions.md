@@ -35,32 +35,42 @@ tests/test_utils/
 
 ## Step 5 — Document
 
-Add docstring and update architecture docs if needed.
+Update:
 
-## Example: Adding Baseline Correction
+- `docs/architecture/math.md`
+- Any relevant developer guides
 
-The baseline correction functions in `math_spectral.py` demonstrate the correct structure:
+## Example: Baseline Correction
 
-- Pure functions
-- Clear docstrings
-- No side effects
-- Technique-agnostic
-- Exposed through a unified wrapper (`baseline()`)
+Baseline correction functions in `math_spectral.py` demonstrate:
 
-When adding new spectral math functions, follow the same pattern.
+- Multiple methods (polynomial, rolling, AsLS)
+- A unified wrapper (`baseline()`)
+- Technique-agnostic design
 
-### Example: Adding Smoothing Functions
+## Example: Smoothing Functions
 
-The smoothing functions in `math_spectral.py` demonstrate:
+Smoothing functions in `math_spectral.py` demonstrate:
 
-- How to implement multiple related transforms
-- How to expose them through a unified wrapper (`smooth()`)
-- How to keep functions pure and technique-agnostic
+- Multiple methods (moving average, Gaussian, Savitzky–Golay)
+- A unified wrapper (`smooth()`)
+- Pure, processor-agnostic implementation
 
-- ### Example: Adding Normalization Functions
+## Example: Normalization Functions
 
 Normalization functions in `math_spectral.py` demonstrate:
 
-- How to implement multiple related transforms
-- How to expose them through a unified wrapper (`normalize()`)
-- How to keep functions pure and technique-agnostic
+- Multiple normalization strategies
+- A unified wrapper (`normalize()`)
+- No mutation of inputs
+
+## Example: Peak Detection
+
+Peak detection in `math_spectral.py` demonstrates:
+
+- Advanced logic (local maxima, derivative-based, prominence, width, refinement)
+- A structured result object (`PeakDetectionResult`)
+- A unified wrapper (`detect_peaks()`)
+- Processor-agnostic, technique-agnostic design
+
+When adding new spectral math functions, follow these patterns.
