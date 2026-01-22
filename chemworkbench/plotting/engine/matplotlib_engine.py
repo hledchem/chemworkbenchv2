@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
@@ -40,12 +41,7 @@ class MatplotlibEngine:
                 sharex=plot.sharex,
                 sharey=plot.sharey,
             )
-            # Normalize axes to a flat list
-            if not isinstance(axes, (list, tuple)):
-                axes = [axes]
-            else:
-                # axes is a 2D array
-                axes = [ax for row in axes for ax in (row if isinstance(row, (list, tuple)) else [row])]
+            axes = np.array(axes).reshape(-1).tolist()
         else:
             if plot.is_3d:
                 fig = plt.figure(figsize=plot.figsize)
@@ -58,11 +54,23 @@ class MatplotlibEngine:
         if plot.nrows == 1 and plot.ncols == 1:
             axes[0].set_title(plot.title)
 
+        configured = set()
+
         for layer in plot.layers:
             idx = max(0, min(layer.panel, len(axes) - 1))
             ax = axes[idx]
-            MatplotlibEngine._configure_axes(ax, plot, layer, is_main=(idx == 0))
+
+            if idx not in configured:
+                MatplotlibEngine._configure_axes(ax, plot, layer, is_main=(idx == 0))
+                configured.add(idx)
+
             MatplotlibEngine._render_layer(ax, layer)
+
+        # Add legends where appropriate
+        for ax in axes:
+            handles, labels = ax.get_legend_handles_labels()
+            if handles:
+                ax.legend()
 
         fig.tight_layout()
         return fig
