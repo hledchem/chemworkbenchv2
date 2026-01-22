@@ -71,5 +71,24 @@ All smoothing functions follow the v2 math rules:
 
 - smooth(x, y, method="moving_average", **kwargs)
 
+## Normalization
+
+Normalization functions are implemented in `math_spectral.py` and include:
+
+- Max normalization (max(|y|) = 1)
+- Min-max normalization ([0, 1] scaling)
+- Area normalization (area under curve = 1)
+
+All normalization functions follow the v2 math rules:
+
+- Pure functions
+- No mutation of inputs
+- Technique-agnostic
+- Return `(x, y_norm)`
+- Exposed through a unified wrapper:
+
+- normalize(x, y, method="max", **kwargs)
+
+
 
 
