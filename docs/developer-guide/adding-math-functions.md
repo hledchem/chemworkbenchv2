@@ -36,3 +36,15 @@ tests/test_utils/
 ## Step 5 — Document
 
 Add docstring and update architecture docs if needed.
+
+## Example: Adding Baseline Correction
+
+The baseline correction functions in `math_spectral.py` demonstrate the correct structure:
+
+- Pure functions
+- Clear docstrings
+- No side effects
+- Technique-agnostic
+- Exposed through a unified wrapper (`baseline()`)
+
+When adding new spectral math functions, follow the same pattern.
