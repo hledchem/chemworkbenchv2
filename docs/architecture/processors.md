@@ -1,47 +1,59 @@
-# Architecture: Processor Layer
+docs/architecture/processors.md
+# Processor Architecture
 
-Processors are thin, technique-specific modules that:
+ChemWorkBench processors live under:
 
-- Load raw data
-- Map config to math functions
-- Apply technique-specific transforms
-- Build plot layers
-- Provide metadata for UI
 
-## Processor Responsibilities
+chemworkbench/processors/<technique>/
 
-### 1. Raw Loading
-Convert file to raw arrays.
+Each processor is a self-contained module implementing the universal processing pipeline:
 
-### 2. Processing
-Call universal math functions:
+1. `load()`
+2. `validate()`
+3. `preprocess()`
+4. `process()`
+5. `postprocess()`
+6. `make_plots()`
+7. `export()`
 
-data = data_utils.smooth(data, window=7)
+Processors must return:
 
-### 3. Technique-Specific Transforms
-Examples:
+- processed numerical data (dict)
+- metadata (dict)
+- QC metrics (dict of `QCMetric`)
+- plot definitions (`List[PlotConfig]`)
 
-- NMR phasing
-- MS calibration
-- IR band math
+## Folder Structure
 
-### 4. Plot Layer Construction
-Processors define how data should be visualized:
+Example for UV-Vis:
 
-layers = [ {"type": "line", "source": "processed"} ]
+
+chemworkbench/processors/uvvis/ init.py config.py processor.py
 
-### 5. Metadata
-Used by UI:
+## Config Models
 
-available_tools = ["baseline", "smooth", "peaks"]
+Each processor defines a Pydantic config model inheriting from:
 
-## What Processors Must Not Do
 
-- Implement math
-- Implement plotting
-- Implement IO
-- Implement pipeline logic
-- Store state
+chemworkbench/core/models.BaseProcessorConfig
+
+This ensures:
+
+- validation
+- serialization
+- compatibility with the universal pipeline
+
+## Plot Output
+
+Processors do not render figures directly.  
+They return `PlotConfig` objects, which the plotting engine later renders.
+
+Each `PlotConfig` contains:
+
+- title, labels, scales
+- backend selection
+- a list of `PlotLayerConfig` objects
+
 
 
 
