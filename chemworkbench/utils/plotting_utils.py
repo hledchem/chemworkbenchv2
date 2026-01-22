@@ -14,3 +14,8 @@ def render_dashboard(result: PipelineResult):
     # Render all PlotConfig objects using the universal engine
     figures = PlotEngine.render_all(result.plots)
     return figures
+
+def show_dashboard(figures):
+    """Convenience helper for local testing."""
+    for fig in figures:
+        fig.show()
