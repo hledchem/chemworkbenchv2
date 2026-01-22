@@ -56,3 +56,11 @@ The smoothing functions in `math_spectral.py` demonstrate:
 - How to implement multiple related transforms
 - How to expose them through a unified wrapper (`smooth()`)
 - How to keep functions pure and technique-agnostic
+
+- ### Example: Adding Normalization Functions
+
+Normalization functions in `math_spectral.py` demonstrate:
+
+- How to implement multiple related transforms
+- How to expose them through a unified wrapper (`normalize()`)
+- How to keep functions pure and technique-agnostic
