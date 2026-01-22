@@ -125,6 +125,22 @@ All peak detection logic is:
 - Non-duplicated
 - Ready for use by any processor or plotting layer
 
+## Region Integration
+
+Region integration is implemented in `math_spectral.py` and provides:
+
+- `integrate_region(x, y, x_min=None, x_max=None)`  
+  Integrate y over a single x-range using trapezoidal integration.
+
+- `integrate_regions(x, y, regions)`  
+  Integrate y over multiple (x_min, x_max) regions and return an array of areas.
+
+Design properties:
+
+- Pure functions
+- Technique-agnostic
+- No mutation of inputs
+- Ready for use by any processor (UV-Vis band areas, IR band integrals, chromatographic peak areas, etc.)
 
 
 
