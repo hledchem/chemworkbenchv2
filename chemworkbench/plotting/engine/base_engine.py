@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from chemworkbench.core.models import PlotConfig, PlotLayerConfig, PlotBackend
+from chemworkbench.core.models import PlotConfig, PlotBackend
 from chemworkbench.plotting.engine.matplotlib_engine import MatplotlibEngine
 
 
@@ -21,4 +21,5 @@ class PlotEngine:
 
     @staticmethod
     def render_all(plots: List[PlotConfig]):
+        """Render a list of plots (a dashboard)."""
         return [PlotEngine.render(p) for p in plots]
