@@ -305,7 +305,7 @@ class UVVisProcessor:
             title="UV-Vis Spectrum",
             x_label="Wavelength",
             y_label="Intensity (normalized)",
-            backend=PlotBackend.NONE,
+            backend=PlotBackend.MATPLOTLIB,
             show_legend=True,
             show_grid=True,
             x_scale="linear",
