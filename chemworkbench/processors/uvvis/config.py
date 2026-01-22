@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 
 from pydantic import Field
 
-from core.models import BaseProcessorConfig
+from chemworkbench.core.models import BaseProcessorConfig
 
 
 class UVVisConfig(BaseProcessorConfig):
@@ -14,7 +14,9 @@ class UVVisConfig(BaseProcessorConfig):
     preprocessing, normalization, and peak analysis options.
     """
 
+    # ------------------------------------------------------------------
     # Baseline correction
+    # ------------------------------------------------------------------
     baseline_method: str = Field(
         default="polynomial",
         description=(
@@ -43,7 +45,9 @@ class UVVisConfig(BaseProcessorConfig):
         description="Asymmetry parameter for 'asls' baseline.",
     )
 
+    # ------------------------------------------------------------------
     # Smoothing
+    # ------------------------------------------------------------------
     smoothing_method: str = Field(
         default="moving_average",
         description="Smoothing method: 'moving_average', 'gaussian', or 'savitzky_golay'.",
@@ -61,13 +65,17 @@ class UVVisConfig(BaseProcessorConfig):
         description="Polynomial order for Savitzky–Golay smoothing.",
     )
 
+    # ------------------------------------------------------------------
     # Normalization
+    # ------------------------------------------------------------------
     normalization_method: str = Field(
         default="max",
         description="Normalization method: 'max', 'min_max', or 'area'.",
     )
 
+    # ------------------------------------------------------------------
     # Peak detection
+    # ------------------------------------------------------------------
     detect_peaks: bool = Field(
         default=True,
         description="Whether to perform peak detection.",
@@ -97,13 +105,17 @@ class UVVisConfig(BaseProcessorConfig):
         description="Whether to apply quadratic refinement to peak positions.",
     )
 
-    # Integration regions (optional)
+    # ------------------------------------------------------------------
+    # Integration regions
+    # ------------------------------------------------------------------
     integration_regions: List[Tuple[float, float]] = Field(
         default_factory=list,
         description="List of (x_min, x_max) regions for area integration.",
     )
 
+    # ------------------------------------------------------------------
     # Extra metadata / options
+    # ------------------------------------------------------------------
     extra_options: Dict[str, str] = Field(
         default_factory=dict,
         description="Additional UV-Vis-specific options (JSON-serializable).",
