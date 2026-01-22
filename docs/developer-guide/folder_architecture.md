@@ -1,3 +1,4 @@
+chemworkbenchv2/
 chemworkbench/
     __init__.py
   # ------------------------------------------------------------
@@ -47,34 +48,35 @@ utils/
 # Plotting subsystem: 3-tier architecture
  # ------------------------------------------------------------
  plotting/
+ 
+    __init__.py
+
+    engine/
         __init__.py
-        engine/
-            __init__.py
-            base_engine.py        # render_plot(), backend selection, style merging
-            matplotlib_engine.py  # Matplotlib backend implementation
-            plotly_engine.py      # Plotly backend implementation (future)
-            bokeh_engine.py       # Bokeh backend implementation (future)
+        base_engine.py
+        matplotlib_engine.py
 
- layer_types/
-            __init__.py
-            line.py               # Renderer for PlotType.LINE
-            scatter.py            # Renderer for PlotType.SCATTER
-            bar.py
-            stem.py
-            step.py
-            errorbar.py
-            heatmap.py
-            contour.py
-            image.py
-            surface.py
+    layer_types/
+        __init__.py
+        line.py
+        scatter.py
+        bar.py
+        stem.py
+        step.py
+        errorbar.py
+        heatmap.py
+        contour.py
+        image.py
+        surface.py
 
-   style_presets/
-            __init__.py
-            default.py            # Default theme
-            dark.py               # Dark theme
-            publication.py        # Publication-ready theme
-            high_contrast.py      # Accessibility theme
-            pastel.py             # Soft color theme
+    style_presets/
+        __init__.py
+        default.py
+        dark.py
+        publication.py
+        high_contrast.py
+        pastel.py
+
   # ------------------------------------------------------------ 
   # API layer: REST, RPC, or WebSocket endpoints (future)
   # ------------------------------------------------------------
@@ -108,12 +110,25 @@ examples/
      test_uvvis_pipeline.py   # End-to-end test script
 
 docs/
-    # Architecture, naming conventions, developer guides
-    naming_conventions.md
-    developer_guide.md
-    plotting_overview.md
-    processor_development.md
-    pipeline_overview.md
+   architecture/
+       config.md
+       layers.md
+       math.md
+       pipeline.md
+       plotting.md
+       processors.md
+   developer-guide/
+       adding-a-processor.md
+       adding-a-tool.md
+       adding-math-functions.md
+       adding-plot-templates.md
+       folder_architecture.md
+       naming_convenction.md
+       project-structure.md
+   user-guide/
+       layers.md
+       overview.md
+       pipeline.md
 
 tests/
     # Unit tests for processors, math layer, pipeline, plotting
