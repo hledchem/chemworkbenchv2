@@ -74,3 +74,11 @@ Peak detection in `math_spectral.py` demonstrates:
 - Processor-agnostic, technique-agnostic design
 
 When adding new spectral math functions, follow these patterns.
+
+## Example: Region Integration
+
+Region integration functions in `math_spectral.py` demonstrate:
+
+- How to operate on arbitrary x-ranges
+- How to keep the API simple (`integrate_region`, `integrate_regions`)
+- How to return plain numeric results that processors can attach to reports or metadata
