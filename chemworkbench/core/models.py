@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 # ------------------------------------------------------------
 
 class Technique(str, Enum):
+    GENERIC = "generic"
     UV_VIS = "uvvis"
     IR = "ir"
     NMR = "nmr"
