@@ -89,6 +89,43 @@ All normalization functions follow the v2 math rules:
 
 - normalize(x, y, method="max", **kwargs)
 
+## Peak Detection
+
+Advanced peak detection is implemented in `math_spectral.py` and provides:
+
+- Local maxima detection
+- Derivative-based detection
+- Absolute and relative height thresholds
+- Prominence estimation and filtering
+- Width estimation (e.g., FWHM-like)
+- Quadratic refinement of peak positions
+- Region-restricted detection (x_min, x_max)
+
+The main entry point is:
+
+from chemworkbench.utils.math_spectral import detect_peaks, PeakDetectionResult
+result = detect_peaks( x, y, method="local_maxima", height=..., rel_height=..., min_prominence=..., estimate_width=True, width_rel_height=0.5, x_min=None, x_max=None, refine=True, derivative=False,)
+
+
+The function returns a `PeakDetectionResult` object with:
+
+- `indices` — peak indices in the original arrays  
+- `x` — peak positions  
+- `y` — peak heights  
+- `prominence` — estimated prominence (optional)  
+- `width` — estimated widths (optional)  
+- `refined_x`, `refined_y` — refined peak positions and heights (optional)  
+- `metadata` — configuration used for detection  
+
+All peak detection logic is:
+
+- Pure
+- Processor-agnostic
+- Technique-agnostic
+- Non-duplicated
+- Ready for use by any processor or plotting layer
+
+
 
 
 
