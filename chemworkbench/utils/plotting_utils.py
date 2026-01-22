@@ -1,6 +1,14 @@
 from typing import List
 from chemworkbench.core.models import PipelineResult, PlotConfig
 from chemworkbench.plotting.engine.base_engine import PlotEngine
+import matplotlib.pyplot as plt
+
+def show_dashboard(figures):
+    for fig in figures:
+        if fig is not None:
+            fig.show()
+    plt.show()   # <-- keeps the window open
+
 
 
 def render_dashboard(result: PipelineResult):
@@ -15,7 +23,3 @@ def render_dashboard(result: PipelineResult):
     figures = PlotEngine.render_all(result.plots)
     return figures
 
-def show_dashboard(figures):
-    """Convenience helper for local testing."""
-    for fig in figures:
-        fig.show()
