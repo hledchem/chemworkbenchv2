@@ -403,3 +403,124 @@ def smooth(
         return smooth_savitzky_golay(x, y, **kwargs)
     else:
         raise ValueError(f"Unknown smoothing method: {method}")
+
+# ---------------------------------------------------------------------------
+# Normalization Functions
+# ---------------------------------------------------------------------------
+
+def normalize_max(
+    x: Sequence[float],
+    y: Sequence[float],
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Normalize so that max(|y|) = 1.
+
+    Parameters
+    ----------
+    x : array-like
+    y : array-like
+
+    Returns
+    -------
+    x_arr, y_norm
+    """
+    x_arr = np.asarray(x)
+    y_arr = np.asarray(y, dtype=float)
+
+    max_val = np.max(np.abs(y_arr))
+    if max_val == 0:
+        return x_arr, y_arr
+
+    return x_arr, y_arr / max_val
+
+
+def normalize_min_max(
+    x: Sequence[float],
+    y: Sequence[float],
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Normalize to the [0, 1] range.
+
+    Parameters
+    ----------
+    x : array-like
+    y : array-like
+
+    Returns
+    -------
+    x_arr, y_norm
+    """
+    x_arr = np.asarray(x)
+    y_arr = np.asarray(y, dtype=float)
+
+    y_min = np.min(y_arr)
+    y_max = np.max(y_arr)
+    if y_max == y_min:
+        return x_arr, y_arr
+
+    return x_arr, (y_arr - y_min) / (y_max - y_min)
+
+
+def normalize_area(
+    x: Sequence[float],
+    y: Sequence[float],
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Normalize so that the area under the curve is 1.
+    Uses trapezoidal integration.
+
+    Parameters
+    ----------
+    x : array-like
+    y : array-like
+
+    Returns
+    -------
+    x_arr, y_norm
+    """
+    x_arr = np.asarray(x)
+    y_arr = np.asarray(y, dtype=float)
+
+    area = np.trapz(y_arr, x_arr)
+    if area == 0:
+        return x_arr, y_arr
+
+    return x_arr, y_arr / area
+
+
+# ---------------------------------------------------------------------------
+# Unified Normalization Wrapper
+# ---------------------------------------------------------------------------
+
+def normalize(
+    x: Sequence[float],
+    y: Sequence[float],
+    method: str = "max",
+    **kwargs,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Unified normalization wrapper.
+
+    Parameters
+    ----------
+    x : array-like
+    y : array-like
+    method : str
+        One of: "max", "min_max", "area"
+    kwargs : dict
+        Additional parameters passed to the underlying method.
+
+    Returns
+    -------
+    x_arr, y_norm
+    """
+    method = method.lower()
+
+    if method == "max":
+        return normalize_max(x, y, **kwargs)
+    elif method == "min_max":
+        return normalize_min_max(x, y, **kwargs)
+    elif method == "area":
+        return normalize_area(x, y, **kwargs)
+    else:
+        raise ValueError(f"Unknown normalization method: {method}")
