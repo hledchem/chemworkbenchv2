@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from core.models import (
+from chemworkbench.core.models import (
     BaseProcessorConfig,
     PlotBackend,
     PlotConfig,
     PlotLayerConfig,
-    ProcessedData,
     QCMetric,
     Technique,
+    PlotType,
 )
-from core.math_spectral import (
+from chemworkbench.utils.math_spectral import (
     baseline,
     detect_peaks,
     integrate_regions,
@@ -27,6 +27,7 @@ class UVVisProcessor:
     """UV-Vis processor implementing the universal processor protocol.
 
     Expects 1D spectral data (wavelength vs absorbance or similar).
+    Integrates with the universal pipeline, math layer, and plotting engine.
     """
 
     name: str
@@ -38,23 +39,27 @@ class UVVisProcessor:
         self.version = version
 
     # -------------------------------------------------------------------------
-    # Required core method
+    # Required core method (called by the pipeline)
     # -------------------------------------------------------------------------
     def process(self, data: Any, config: BaseProcessorConfig) -> Any:
         """Core processing step.
 
-        For UV-Vis, this method assumes that preprocessing has already
-        produced a cleaned, baseline-corrected, smoothed, normalized
-        spectrum. Here we primarily compute peak-related outputs and
-        integration results.
+        Assumes preprocessing has already produced a baseline-corrected,
+        smoothed, normalized spectrum. Here we primarily compute peak-related
+        outputs and integration results, and return a structured payload.
         """
         if not isinstance(config, UVVisConfig):
             raise TypeError("UVVisProcessor requires a UVVisConfig instance.")
 
-        x_arr, y_arr = self._extract_xy(data)
+        # Data at this stage should be the dict returned by preprocess()
+        if not isinstance(data, dict):
+            raise TypeError("UVVisProcessor.process expects a dict from preprocess().")
+
+        x_arr = np.asarray(data["x"], dtype=float)
+        y_arr = np.asarray(data["y"], dtype=float)
 
         # Peak detection (optional)
-        peaks_result = None
+        peak_results_dict: Optional[Dict[str, Any]] = None
         if config.detect_peaks:
             peaks_result = detect_peaks(
                 x_arr,
@@ -70,6 +75,7 @@ class UVVisProcessor:
                 refine=config.peak_refine,
                 derivative=False,
             )
+            peak_results_dict = self._peak_result_to_dict(peaks_result)
 
         # Integration (optional)
         integration_results: Dict[str, float] = {}
@@ -79,13 +85,12 @@ class UVVisProcessor:
                 key = f"region_{x_min:g}_{x_max:g}"
                 integration_results[key] = float(area)
 
-        # Return a structured payload that will become processed_data
-        return {
-            "x": x_arr,
-            "y": y_arr,
-            "peaks": peaks_result,
-            "integration": integration_results,
-        }
+        # Merge with existing preprocessed payload so we keep baseline, etc.
+        processed_payload: Dict[str, Any] = dict(data)
+        processed_payload["peak_results"] = peak_results_dict
+        processed_payload["integration_results"] = integration_results
+
+        return processed_payload
 
     # -------------------------------------------------------------------------
     # Optional hooks used by the pipeline
@@ -105,14 +110,22 @@ class UVVisProcessor:
             raise ValueError("UV-Vis data must contain non-empty x and y arrays.")
         if x_arr.shape != y_arr.shape:
             raise ValueError("UV-Vis x and y arrays must have the same shape.")
-        return {"x": x_arr, "y": y_arr}
+        # Preserve raw arrays in a dict for downstream steps
+        return {"x_raw": x_arr, "y_raw": y_arr}
 
     def preprocess(self, data: Any, config: BaseProcessorConfig) -> Any:
         """Apply baseline correction, smoothing, and normalization."""
         if not isinstance(config, UVVisConfig):
             raise TypeError("UVVisProcessor requires a UVVisConfig instance.")
 
-        x_arr, y_arr = self._extract_xy(data)
+        if isinstance(data, dict) and "x_raw" in data and "y_raw" in data:
+            x_arr = np.asarray(data["x_raw"], dtype=float)
+            y_arr = np.asarray(data["y_raw"], dtype=float)
+        else:
+            x_arr, y_arr = self._extract_xy(data)
+
+        # Keep a copy of the raw signal
+        y_raw = y_arr.copy()
 
         # Baseline correction
         baseline_kwargs: Dict[str, Any] = {}
@@ -161,6 +174,8 @@ class UVVisProcessor:
         return {
             "x": x_arr,
             "y": y_norm,
+            "x_raw": x_arr,
+            "y_raw": y_raw,
             "baseline": baseline_arr,
             "y_corrected": y_corrected,
             "y_smooth": y_smooth,
@@ -176,22 +191,31 @@ class UVVisProcessor:
 
     def build_metadata(self, data: Any, config: BaseProcessorConfig) -> Dict[str, Any]:
         """Build technique-specific metadata for ProcessedData.metadata."""
-        x_arr, y_arr = self._extract_xy(data)
+        if isinstance(data, dict) and "x" in data:
+            x_arr = np.asarray(data["x"], dtype=float)
+        else:
+            x_arr, _ = self._extract_xy(data)
+
         meta: Dict[str, Any] = {
             "n_points": int(x_arr.size),
             "x_min": float(x_arr.min()) if x_arr.size > 0 else None,
             "x_max": float(x_arr.max()) if x_arr.size > 0 else None,
             "config": config.model_dump(),
         }
-        # Include integration metadata if present
-        integration = data.get("integration") if isinstance(data, dict) else None
+
+        integration = data.get("integration_results") if isinstance(data, dict) else None
         if isinstance(integration, dict) and integration:
             meta["integration_regions"] = list(integration.keys())
+
         return meta
 
     def compute_qc(self, data: Any, config: BaseProcessorConfig) -> Dict[str, QCMetric]:
         """Compute quality-control metrics for ProcessedData.qc."""
-        x_arr, y_arr = self._extract_xy(data)
+        if isinstance(data, dict) and "y" in data:
+            y_arr = np.asarray(data["y"], dtype=float)
+        else:
+            _, y_arr = self._extract_xy(data)
+
         qc: Dict[str, QCMetric] = {}
 
         if y_arr.size > 0:
@@ -216,12 +240,19 @@ class UVVisProcessor:
         config: BaseProcessorConfig,
     ) -> List[PlotConfig]:
         """Generate PlotConfig objects for the processed UV-Vis data."""
-        # Data may be the output of preprocess or process depending on pipeline order
         if isinstance(data, dict) and "x" in data and "y" in data:
             x_arr = np.asarray(data["x"], dtype=float)
             y_arr = np.asarray(data["y"], dtype=float)
-            baseline_arr = np.asarray(data.get("baseline")) if "baseline" in data else None
-            y_raw = np.asarray(data.get("y_raw")) if "y_raw" in data else None
+            baseline_arr = (
+                np.asarray(data["baseline"], dtype=float)
+                if "baseline" in data
+                else None
+            )
+            y_raw = (
+                np.asarray(data["y_raw"], dtype=float)
+                if "y_raw" in data
+                else None
+            )
         else:
             x_arr, y_arr = self._extract_xy(data)
             baseline_arr = None
@@ -290,7 +321,6 @@ class UVVisProcessor:
 
         Placeholder for writing processed results to disk or other targets.
         """
-        # No-op for now
         return None
 
     # -------------------------------------------------------------------------
@@ -322,3 +352,34 @@ class UVVisProcessor:
         x_arr = np.asarray(x, dtype=float)
         y_arr = np.asarray(y, dtype=float)
         return x_arr, y_arr
+
+    @staticmethod
+    def _peak_result_to_dict(result: Any) -> Optional[Dict[str, Any]]:
+        """Convert PeakDetectionResult to a JSON-serializable dict."""
+        if result is None:
+            return None
+
+        indices = result.indices.tolist()
+        x = result.x.tolist()
+        y = result.y.tolist()
+        prominence = (
+            result.prominence.tolist() if result.prominence is not None else None
+        )
+        width = result.width.tolist() if result.width is not None else None
+        refined_x = (
+            result.refined_x.tolist() if result.refined_x is not None else None
+        )
+        refined_y = (
+            result.refined_y.tolist() if result.refined_y is not None else None
+        )
+
+        return {
+            "indices": indices,
+            "x": x,
+            "y": y,
+            "prominence": prominence,
+            "width": width,
+            "refined_x": refined_x,
+            "refined_y": refined_y,
+            "metadata": result.metadata,
+        }
