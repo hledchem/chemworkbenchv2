@@ -53,3 +53,23 @@ This allows processors and pipelines to call baseline correction without knowing
 - No IO logic
 - All functions return `(x, baseline)`
 
+## Smoothing
+
+Smoothing functions are implemented in `math_spectral.py` and include:
+
+- Moving average smoothing
+- Gaussian smoothing
+- Savitzky–Golay smoothing
+
+All smoothing functions follow the v2 math rules:
+
+- Pure functions
+- No mutation of inputs
+- Technique-agnostic
+- Return `(x, y_smooth)`
+- Exposed through a unified wrapper:
+
+- smooth(x, y, method="moving_average", **kwargs)
+
+
+
