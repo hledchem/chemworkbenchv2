@@ -1,132 +1,191 @@
 from __future__ import annotations
 
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+from typing import Callable, Dict, Tuple
 
-from chemworkbench.core.models import PlotConfig, PlotLayerConfig, PlotType
-from chemworkbench.plotting.style_presets.default import apply_default_style
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+
+from chemworkbench.core.models import (
+    PlotBackend,
+    PlotConfig,
+    PlotLayerConfig,
+    PlotType,
+)
+from chemworkbench.plotting.engine.base_engine import BasePlotEngine
 from chemworkbench.plotting.layer_types import (
-    render_line,
-    render_scatter,
-    render_bar,
-    render_stem,
-    render_step,
-    render_errorbar,
-    render_heatmap,
-    render_contour,
-    render_image,
-    render_pie,
-    render_histogram,
-    render_3d_line,
-    render_3d_scatter,
-    render_3d_surface,
-    render_3d_wireframe,
+    line,
+    scatter,
+    bar,
+    stem,
+    step,
+    errorbar,
+    heatmap,
+    contour,
+    image,
+    surface,
 )
 
 
-class MatplotlibEngine:
-    """Matplotlib backend for rendering PlotConfig objects."""
+# --------------------------------------------------------------------
+# Layer renderer registry
+# --------------------------------------------------------------------
 
-    @staticmethod
-    def render(plot: PlotConfig):
-        apply_default_style()
+LayerRenderer = Callable[[Axes, PlotLayerConfig], None]
 
-        # Multi-panel support
-        if plot.nrows > 1 or plot.ncols > 1:
-            fig, axes = plt.subplots(
-                nrows=plot.nrows,
-                ncols=plot.ncols,
-                figsize=plot.figsize,
-                sharex=plot.sharex,
-                sharey=plot.sharey,
+
+LAYER_RENDERERS: Dict[PlotType, LayerRenderer] = {
+    PlotType.LINE: line.render,
+    PlotType.SCATTER: scatter.render,
+    PlotType.BAR: bar.render,
+    PlotType.STEM: stem.render,
+    PlotType.STEP: step.render,
+    PlotType.ERRORBAR: errorbar.render,
+    PlotType.HEATMAP: heatmap.render,
+    PlotType.CONTOUR: contour.render,
+    PlotType.IMAGE: image.render,
+    # 3D / surface-like plots
+    PlotType.SURFACE_3D: surface.render,
+    PlotType.LINE_3D: surface.render,
+    PlotType.SCATTER_3D: surface.render,
+    PlotType.WIREFRAME_3D: surface.render,
+    # These can be implemented later in dedicated modules:
+    # PlotType.PIE: pie.render,
+    # PlotType.HISTOGRAM: histogram.render,
+}
+
+
+# --------------------------------------------------------------------
+# Matplotlib plotting engine
+# --------------------------------------------------------------------
+
+class MatplotlibEngine(BasePlotEngine):
+    """
+    Matplotlib-based plotting engine for ChemWorkBench.
+
+    This engine consumes PlotConfig objects and renders them using
+    Matplotlib, including support for multi-panel figures via the
+    (nrows, ncols) grid and per-layer `panel` indices.
+    """
+
+    def render(self, plot_config: PlotConfig) -> Figure:
+        """
+        Render a PlotConfig into a Matplotlib Figure.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+        """
+        if plot_config.backend not in (PlotBackend.MATPLOTLIB, PlotBackend.NONE):
+            raise ValueError(
+                f"MatplotlibEngine cannot handle backend '{plot_config.backend.value}'"
             )
-            axes = np.array(axes).reshape(-1).tolist()
+
+        fig, axes = self._create_figure_and_axes(plot_config)
+
+        # Normalize axes to a 2D array for consistent indexing
+        if isinstance(axes, Axes):
+            axes_grid = [[axes]]
         else:
-            if plot.is_3d:
-                fig = plt.figure(figsize=plot.figsize)
-                axes = [fig.add_subplot(111, projection="3d")]
-            else:
-                fig, ax = plt.subplots(figsize=plot.figsize)
-                axes = [ax]
+            axes_grid = axes
 
-        # Apply global title only if single panel
-        if plot.nrows == 1 and plot.ncols == 1:
-            axes[0].set_title(plot.title)
+        # Render each layer on its assigned panel
+        for layer in plot_config.layers:
+            if not layer.visible:
+                continue
 
-        configured = set()
+            ax = self._select_axes_for_layer(
+                axes_grid,
+                layer.panel,
+                plot_config.nrows,
+                plot_config.ncols,
+            )
 
-        for layer in plot.layers:
-            idx = max(0, min(layer.panel, len(axes) - 1))
-            ax = axes[idx]
+            self._apply_axes_scales_and_limits(ax, plot_config)
+            self._render_layer(ax, layer)
 
-            if idx not in configured:
-                MatplotlibEngine._configure_axes(ax, plot, layer, is_main=(idx == 0))
-                configured.add(idx)
-
-            MatplotlibEngine._render_layer(ax, layer)
-
-        # Add legends where appropriate
-        for ax in axes:
-            handles, labels = ax.get_legend_handles_labels()
-            if handles:
-                ax.legend()
+        # Apply labels and title to the first axes by default
+        first_ax = axes_grid[0][0]
+        self._apply_labels_and_title(first_ax, plot_config)
 
         fig.tight_layout()
         return fig
 
-    @staticmethod
-    def _configure_axes(ax, plot: PlotConfig, layer: PlotLayerConfig, is_main: bool):
-        # Only main panel gets labels if shared axes
-        if is_main or not (plot.sharex or plot.sharey):
-            ax.set_xlabel(plot.x_label)
-            ax.set_ylabel(plot.y_label)
-            if plot.is_3d and plot.z_label:
-                ax.set_zlabel(plot.z_label)
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
 
-        ax.set_xscale(plot.x_scale)
-        ax.set_yscale(plot.y_scale)
-        if plot.is_3d:
-            ax.set_zscale(plot.z_scale)
+    def _create_figure_and_axes(
+        self, plot_config: PlotConfig
+    ) -> Tuple[Figure, Axes | list[list[Axes]]]:
+        """
+        Create a Matplotlib figure and axes grid based on PlotConfig.
+        """
+        nrows = max(1, plot_config.nrows)
+        ncols = max(1, plot_config.ncols)
 
-        if plot.x_limits:
-            ax.set_xlim(*plot.x_limits)
-        if plot.y_limits:
-            ax.set_ylim(*plot.y_limits)
-        if plot.z_limits and plot.is_3d:
-            ax.set_zlim(*plot.z_limits)
+        fig, axes = plt.subplots(
+            nrows=nrows,
+            ncols=ncols,
+            figsize=plot_config.figsize,
+            sharex=plot_config.sharex,
+            sharey=plot_config.sharey,
+            squeeze=False,
+        )
 
-    @staticmethod
-    def _render_layer(ax, layer: PlotLayerConfig):
-        if layer.plot_type == PlotType.LINE:
-            return render_line(ax, layer)
-        if layer.plot_type == PlotType.SCATTER:
-            return render_scatter(ax, layer)
-        if layer.plot_type == PlotType.BAR:
-            return render_bar(ax, layer)
-        if layer.plot_type == PlotType.STEM:
-            return render_stem(ax, layer)
-        if layer.plot_type == PlotType.STEP:
-            return render_step(ax, layer)
-        if layer.plot_type == PlotType.ERRORBAR:
-            return render_errorbar(ax, layer)
-        if layer.plot_type == PlotType.HEATMAP:
-            return render_heatmap(ax, layer)
-        if layer.plot_type == PlotType.CONTOUR:
-            return render_contour(ax, layer)
-        if layer.plot_type == PlotType.IMAGE:
-            return render_image(ax, layer)
-        if layer.plot_type == PlotType.PIE:
-            return render_pie(ax, layer)
-        if layer.plot_type == PlotType.HISTOGRAM:
-            return render_histogram(ax, layer)
-        if layer.plot_type == PlotType.LINE_3D:
-            return render_3d_line(ax, layer)
-        if layer.plot_type == PlotType.SCATTER_3D:
-            return render_3d_scatter(ax, layer)
-        if layer.plot_type == PlotType.SURFACE_3D:
-            return render_3d_surface(ax, layer)
-        if layer.plot_type == PlotType.WIREFRAME_3D:
-            return render_3d_wireframe(ax, layer)
+        return fig, axes
 
-        raise ValueError(f"Unsupported plot type: {layer.plot_type}")
+    def _select_axes_for_layer(
+        self,
+        axes_grid: list[list[Axes]],
+        panel_index: int,
+        nrows: int,
+        ncols: int,
+    ) -> Axes:
+        """
+        Map a layer's panel index to a specific Axes in the grid.
+        """
+        if panel_index < 0:
+            panel_index = 0
+
+        max_panels = nrows * ncols
+        if panel_index >= max_panels:
+            panel_index = max_panels - 1
+
+        row = panel_index // ncols
+        col = panel_index % ncols
+
+        return axes_grid[row][col]
+
+    def _apply_axes_scales_and_limits(self, ax: Axes, plot_config: PlotConfig) -> None:
+        """
+        Apply axis scales and limits from PlotConfig to a given Axes.
+        """
+        ax.set_xscale(plot_config.x_scale)
+        ax.set_yscale(plot_config.y_scale)
+
+        if plot_config.x_limits is not None:
+            ax.set_xlim(*plot_config.x_limits)
+        if plot_config.y_limits is not None:
+            ax.set_ylim(*plot_config.y_limits)
+
+    def _apply_labels_and_title(self, ax: Axes, plot_config: PlotConfig) -> None:
+        """
+        Apply axis labels and title to a given Axes.
+        """
+        if plot_config.x_label:
+            ax.set_xlabel(plot_config.x_label)
+        if plot_config.y_label:
+            ax.set_ylabel(plot_config.y_label)
+        if plot_config.title:
+            ax.set_title(plot_config.title)
+
+    def _render_layer(self, ax: Axes, layer: PlotLayerConfig) -> None:
+        """
+        Dispatch rendering of a single layer to the appropriate renderer.
+        """
+        renderer = LAYER_RENDERERS.get(layer.plot_type)
+        if renderer is None:
+            raise ValueError(f"No renderer registered for plot_type '{layer.plot_type.value}'")
+
+        renderer(ax, layer)
