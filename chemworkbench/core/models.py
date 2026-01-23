@@ -133,6 +133,13 @@ class PlotLayerConfig(BaseModel):
     # 3D
     is_3d: bool = False
 
+    # Layer ordering and visibility
+    zorder: Optional[int] = None
+    visible: bool = True
+
+    # Extra options for UI/backends
+    extra: Dict[str, Any] = Field(default_factory=dict)
+
 
 class PlotConfig(BaseModel):
     """High-level plot configuration, backend-agnostic."""
@@ -166,6 +173,9 @@ class PlotConfig(BaseModel):
 
     # Layers
     layers: List[PlotLayerConfig] = Field(default_factory=list)
+
+    # Layout metadata for multi-panel figures (figure + panel info)
+    layout: Dict[str, Any] = Field(default_factory=dict)
 
     # Extra options for UI/backends
     extra: Dict[str, Any] = Field(default_factory=dict)
