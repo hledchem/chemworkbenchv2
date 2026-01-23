@@ -317,6 +317,78 @@ developer_guide.md
 math_layer.md
 pipeline_overview.md
 
+16. Plotting Subsystem Naming
+16.1 Schema Classes
+- Must use PascalCase.
+- Must end with Schema.
+Examples:
+- FigureSchema
+- PanelSchema
+- TraceSchema
+- AnnotationSchema
+16.2 Builder Classes
+- Must use PascalCase.
+- Must end with Builder or Validator.
+Examples:
+- PlotConfigBuilder
+- PlotSchemaValidator
+16.3 Registry Keys
+- Must use lower_snake_case.
+Examples:
+- "uvvis_spectrum"
+- "multi_panel_dashboard"
+16.4 Template Files
+- Must use lower_snake_case.json.
+Examples:
+- uvvis_spectrum.json
+- chromatogram.json
+
+17. Services Layer Naming
+17.1 Service Files
+- Must end with _service.py.
+Examples:
+- plotting_service.py
+- processing_service.py
+17.2 Service Classes
+- Must end with Service.
+Examples:
+- PlottingService
+- ProcessingService
+
+18. Plugins Naming
+18.1 Plugin Folder Structure
+plugins/<domain>/<plugin_name>/
+
+
+18.2 Plugin Metadata
+- Must include plugin.json.
+- Must define a PluginConfig class.
+
+19. Runtime Layer Naming
+19.1 Files
+- logging.py
+- environment.py
+- errors.py
+19.2 Classes
+- RuntimeLogger
+- RuntimeEnvironment
+- ErrorHandler
+
+20. Core IO Naming
+20.1 Files
+- json_loader.py
+- yaml_loader.py
+- serializer.py
+- versioning.py
+20.2 Classes
+- JsonLoader
+- YamlLoader
+- Serializer
+- VersionManager
+
+
+
+
 
 
 
