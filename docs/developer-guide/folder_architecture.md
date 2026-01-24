@@ -75,6 +75,7 @@ chemworkbenchv2/
                 scatter_3d.py
                 surface_3d.py
                 wireframe_3d.py
+                surface.py
     │
     │   # Declarative schema (NEW)
     │   ├── schema/
