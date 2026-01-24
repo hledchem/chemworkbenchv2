@@ -43,39 +43,99 @@ chemworkbenchv2/
     │   ├── math_core.py
     │   ├── math_technique.py
     │   └── plotting_utils.py
-            file_sniffer/
-                core_detectors.py
-                file_sniffer.py
-                __init__.py
-                vendor/
-                    __init__.py
-                    agilent_detectors.py
-                    bruker_detectors.py
-                    jeol_detectors.py
-                    perkinelmer_detectors.py
-                    shimadzu_detectors.py
-                    thermo_detectors.py
-                    varian_detectors.py
-                    waters_detectors.py
-            loaders/
-                csv_loader.py
-                xlsx_loader.py
-                jcamp_loader.py
-                    
+
+    │   # --------------------------------------------------------
+    │   # File Sniffer (3-tier detection system)
+    │   # --------------------------------------------------------
+    │   ├── file_sniffer/
+    │   │   ├── __init__.py
+    │   │   ├── file_sniffer.py
+    │   │   ├── core_detectors.py
+    │   │   ├── spectral_detectors.py
+    │   │   └── vendor/
+    │   │       ├── __init__.py
+    │   │       ├── agilent_detectors.py
+    │   │       ├── bruker_detectors.py
+    │   │       ├── thermo_detectors.py
+    │   │       ├── shimadzu_detectors.py
+    │   │       ├── perkinelmer_detectors.py
+    │   │       ├── waters_detectors.py
+    │   │       ├── jeol_detectors.py
+    │   │       └── varian_detectors.py
+
+    │   # --------------------------------------------------------
+    │   # Loaders (NEW: vendor-specific + universal loaders)
+    │   # --------------------------------------------------------
+    │   ├── loaders/
+    │   │   ├── __init__.py
+    │   │
+    │   │   # Universal loaders
+    │   │   ├── csv_loader.py
+    │   │   ├── xlsx_loader.py
+    │   │   ├── jcamp_loader.py
+    │   │
+    │   │   # Vendor-specific loaders (NEW architecture)
+    │   │   ├── agilent/
+    │   │   │   ├── __init__.py
+    │   │   │   ├── agilent_uv_loader.py
+    │   │   │   ├── agilent_sp_loader.py
+    │   │   │   ├── agilent_d_uvvis_loader.py
+    │   │   │   ├── agilent_d_chrom_loader.py
+    │   │   │   └── agilent_d_ms_loader.py   # optional for v3
+    │   │
+    │   │   ├── bruker/
+    │   │   │   ├── __init__.py
+    │   │   │   ├── bruker_opus_loader.py
+    │   │   │   └── bruker_nmr_loader.py
+    │   │
+    │   │   ├── thermo/
+    │   │   │   ├── __init__.py
+    │   │   │   ├── thermo_spa_loader.py
+    │   │   │   ├── thermo_spc_loader.py
+    │   │   │   └── thermo_srs_loader.py
+    │   │
+    │   │   ├── shimadzu/
+    │   │   │   ├── __init__.py
+    │   │   │   ├── shimadzu_spc_loader.py
+    │   │   │   ├── shimadzu_irx_loader.py
+    │   │   │   ├── shimadzu_uvs_loader.py
+    │   │   │   └── shimadzu_lcd_loader.py
+    │   │
+    │   │   ├── perkinelmer/
+    │   │   │   ├── __init__.py
+    │   │   │   ├── perkinelmer_sp_loader.py
+    │   │   │   └── perkinelmer_spc_loader.py
+    │   │
+    │   │   ├── waters/
+    │   │   │   ├── __init__.py
+    │   │   │   └── waters_raw_loader.py
+    │   │
+    │   │   ├── jeol/
+    │   │   │   ├── __init__.py
+    │   │   │   └── jeol_jdf_loader.py
+    │   │
+    │   │   ├── varian/
+    │   │   │   ├── __init__.py
+    │   │   │   └── varian_nmr_loader.py
+    │   │
+    │   │   # Raman-specific loaders
+    │   │   ├── raman/
+    │   │   │   ├── __init__.py
+    │   │   │   ├── dpt_loader.py
+    │   │   │   ├── rruf_loader.py
+    │   │   │   └── rruf_gz_loader.py
 
     # ------------------------------------------------------------
-    # Plotting subsystem: 6-tier architecture (final)
+    # Plotting subsystem: 6-tier architecture
     # ------------------------------------------------------------
     ├── plotting/
     │   ├── __init__.py
     │
-    │   # Rendering engines
     │   ├── engine/
     │   │   ├── __init__.py
     │   │   ├── base_engine.py
     │   │   └── matplotlib_engine.py
     │
-    │   # Primitive layer types (traces)
     │   ├── layer_types/
     │   │   ├── __init__.py
     │   │   ├── line.py
@@ -87,16 +147,14 @@ chemworkbenchv2/
     │   │   ├── heatmap.py
     │   │   ├── contour.py
     │   │   ├── image.py
-    │   │   └── surface.py
-                histogram.py
-                line_3d.py
-                pie.py
-                scatter_3d.py
-                surface_3d.py
-                wireframe_3d.py
-                surface.py
+    │   │   ├── surface.py
+    │   │   ├── histogram.py
+    │   │   ├── line_3d.py
+    │   │   ├── pie.py
+    │   │   ├── scatter_3d.py
+    │   │   ├── surface_3d.py
+    │   │   └── wireframe_3d.py
     │
-    │   # Declarative schema (NEW)
     │   ├── schema/
     │   │   ├── __init__.py
     │   │   ├── figure_schema.py
@@ -104,14 +162,12 @@ chemworkbenchv2/
     │   │   ├── trace_schema.py
     │   │   └── annotation_schema.py
     │
-    │   # Config builder (NEW)
     │   ├── builder/
     │   │   ├── __init__.py
     │   │   ├── config_builder.py
     │   │   ├── defaults.py
     │   │   └── validators.py
     │
-    │   # Graph registry + templates (NEW)
     │   └── registry/
     │       ├── __init__.py
     │       ├── graph_registry.py
@@ -121,7 +177,7 @@ chemworkbenchv2/
     │           └── chromatogram.json
 
     # ------------------------------------------------------------
-    # Services layer (NEW)
+    # Services layer
     # ------------------------------------------------------------
     ├── services/
     │   ├── __init__.py
@@ -143,7 +199,6 @@ chemworkbenchv2/
     # ------------------------------------------------------------
     ├── cli/
     │   └── __init__.py
-    │   # main.py, commands/ (future)
 
     # ------------------------------------------------------------
     # Config system
@@ -156,7 +211,7 @@ chemworkbenchv2/
     │   └── templates/
 
     # ------------------------------------------------------------
-    # Plugins (NEW)
+    # Plugins
     # ------------------------------------------------------------
     ├── plugins/
     │   ├── __init__.py
@@ -165,7 +220,7 @@ chemworkbenchv2/
     │   └── math/
 
     # ------------------------------------------------------------
-    # Runtime (NEW)
+    # Runtime
     # ------------------------------------------------------------
     ├── runtime/
     │   ├── __init__.py
@@ -185,31 +240,9 @@ chemworkbenchv2/
     # ------------------------------------------------------------
     └── docs/
         ├── architecture/
-        │   ├── config.md
-        │   ├── layers.md
-        │   ├── math.md
-        │   ├── pipeline.md
-        │   ├── plotting.md
-        │   └── processors.md
-        │
         ├── developer-guide/
-        │   ├── adding-a-processor.md
-        │   ├── adding-a-tool.md
-        │   ├── adding-math-functions.md
-        │   ├── adding-plot-templates.md
-        │   ├── folder_architecture.md
-        │   ├── naming_convention.md
-        │   └── project-structure.md
-        │
         ├── user-guide/
-        │   ├── layers.md
-        │   ├── overview.md
-        │   └── pipeline.md
-        │
         └── api/
-            ├── plotting.md
-            ├── processing.md
-            └── config.md
 
 # ------------------------------------------------------------
 # Tests
