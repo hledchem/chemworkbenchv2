@@ -1,211 +1,191 @@
 # ChemWorkBench v2 — Analytical Technique Coverage
-
-ChemWorkBench v2 is designed as a universal, vendor‑agnostic scientific data platform capable of ingesting, normalizing, processing, and visualizing data across the major analytical techniques used in chemistry, materials science, and life sciences.
-
-This document defines the **official technique coverage** for v2, including spectroscopy, separations, mass spectrometry, NMR, electrochemistry, and spin‑based methods.  
-It also outlines **recommended v3+ expansions** for long‑term growth.
+Comprehensive, industry‑grade coverage of spectroscopy, spectrometry, chromatography, electrochemistry, and magnetic resonance techniques.  
+This document defines the canonical technique universe for loaders, processors, classifiers, and pipeline routing.
 
 ---
 
-# 1. Nuclear Magnetic Resonance (NMR)
+# 1. Spectroscopy
 
-ChemWorkBench v2 supports the core 1D and 2D NMR experiments used in structural elucidation.
+## 1.1 UV‑Vis Spectroscopy
+**Description:** Absorbance/reflectance spectra across UV–Visible wavelengths.  
+**Common Vendors:** Agilent, Shimadzu, PerkinElmer, OceanOptics.  
+**Typical Formats:** CSV, TXT, JCAMP, Agilent `.D`, Shimadzu `.UVS`.
 
-## 1D NMR
-- ¹H NMR  
-- ¹³C NMR  
-- DEPT‑45 / DEPT‑90 / DEPT‑135 *(recommended addition)*  
-
-## 2D NMR
-- COSY  
-- HSQC  
-- HMBC  
-- NOESY *(recommended addition)*  
-- ROESY *(recommended addition)*  
-
-## Supported Vendors
-- Bruker (fid/ser/acqus/pdata)  
-- JEOL (.jdf)  
-- Varian/Agilent (fid/procpar)  
+### Sub‑modes:
+- Single‑scan UV‑Vis
+- Multi‑scan / kinetics
+- Temperature‑dependent UV‑Vis
 
 ---
 
-# 2. Mass Spectrometry (MS)
+## 1.2 Fluorescence Spectroscopy
+**Description:** Emission/excitation spectra and 2D fluorescence maps.  
+**Common Vendors:** Agilent Cary Eclipse, Horiba, Edinburgh Instruments.  
+**Typical Formats:** CSV, XLSX, vendor‑specific binary.
 
-ChemWorkBench v2 supports the major MS modalities used in organic chemistry, pharma, and analytical labs.
-
-## Core MS Techniques
-- LC‑MS  
-- GC‑MS  
-- ESI‑MS  
-- TOF‑MS  
-- HRMS (Orbitrap/QTOF/FTICR) *(mode, not a separate technique)*  
-
-## Tandem MS
-- MS/MS *(recommended addition)*  
-  - CID  
-  - HCD  
-  - ETD  
-
-## Supported Vendors
-- Agilent (.d)  
-- Thermo (.raw)  
-- Waters (MassLynx .raw directory)  
-- Shimadzu (.lcd)  
+### Sub‑modes:
+- Steady‑state fluorescence
+- Excitation–Emission Matrices (EEM)
+- Time‑resolved fluorescence (TCSPC)
 
 ---
 
-# 3. Chromatography & Separations
+## 1.3 Infrared Spectroscopy (IR / FTIR)
+**Description:** Mid‑IR and near‑IR spectra, typically FTIR.  
+**Common Vendors:** Bruker, Thermo, Shimadzu, PerkinElmer.  
+**Typical Formats:** OPUS, SPC, SPA, SRS, JCAMP.
 
-## Chromatography
-- HPLC  
-- UHPLC  
-- GC  
-- DAD/PDA spectral detectors (Agilent .UV, .CSV, .TXT)  
-
-## Electrophoresis *(optional v3)*
-- Capillary electrophoresis (CE)  
-
----
-
-# 4. Optical & Electronic Spectroscopy
-
-## UV‑Vis
-- Single‑scan  
-- Multi‑scan  
-- DAD/PDA spectral series  
-
-## Fluorescence / Photoluminescence (PL) *(recommended addition)*  
-
-## Circular Dichroism (CD) *(optional v3)*  
+### Sub‑modes:
+- FTIR
+- ATR‑FTIR
+- NIR
 
 ---
 
-# 5. Vibrational Spectroscopy
+## 1.4 Raman Spectroscopy
+**Description:** Raman scattering spectra, including resonance Raman and SERS.  
+**Common Vendors:** Bruker, Horiba, Renishaw.  
+**Typical Formats:** OPUS, DPT, RRUFF, RRUFF‑GZ.
 
-## Infrared
-- IR  
-- FTIR  
-
-## Raman
-- Single‑scan Raman  
-- Multi‑scan Raman  
-- Supported formats:  
-  - SPC  
-  - JCAMP‑DX  
-  - DPT  
-  - RRUF / RRUF.GZ  
+### Sub‑modes:
+- Raman
+- Resonance Raman
+- SERS
 
 ---
 
-# 6. Electron Paramagnetic Resonance (EPR)
+# 2. Nuclear Magnetic Resonance (NMR)
 
-## Continuous‑Wave EPR (CW‑EPR)
-- Standard first‑derivative EPR spectra  
-- JCAMP‑DX and SPC support  
+## 2.1 1D NMR
+- **1H NMR**
+- **13C NMR**
+- **DEPT** (45/90/135)
 
-## **Pulse EPR (NEW)**
-- Echo‑detected EPR  
-- Hahn echo  
-- Rabi oscillations  
-- Relaxation measurements (T₁, T₂)  
-- Basic time‑domain → frequency‑domain transforms  
+## 2.2 2D NMR
+- **COSY**
+- **NOESY**
+- **ROESY**
+- **HSQC**
+- **HMBC**
 
-Pulse EPR is included because it shares data structures with NMR FID processing and can be supported with similar loaders and processors.
+## 2.3 Advanced NMR Modes
+- Variable Temperature (VT) NMR
+- Relaxation (T1/T2)
+- J‑resolved spectra
 
----
-
-# 7. Electrochemistry
-
-## Core Techniques
-- Cyclic Voltammetry (CV)  
-- Differential Pulse Voltammetry (DPV) *(recommended addition)*  
-- Square Wave Voltammetry (SWV) *(recommended addition)*  
-
-These are widely used in:
-- battery research  
-- catalysis  
-- redox chemistry  
-- materials science  
+**Common Vendors:** Bruker (TopSpin), JEOL, Varian.  
+**Typical Formats:** Bruker directory structure, JEOL JDF, Varian FID.
 
 ---
 
-# 8. Recommended v3+ Techniques (Not Required for v2)
+# 3. Mass Spectrometry (MS)
 
-These are high‑value but outside the scope of v2 loaders and processors.
+## 3.1 Ionization Techniques
+- **ESI‑MS**
+- **MALDI‑TOF**
+- **APCI**
+- **EI (Electron Ionization)**
 
-## Materials Characterization
+## 3.2 Mass Analyzer Types
+- **TOF‑MS**
+- **Quadrupole**
+- **Orbitrap**
+- **Ion Trap**
+
+## 3.3 MS Workflows
+- **MS1 (full scan)**
+- **MS/MS (tandem MS)**
+- **HRMS (high‑resolution MS)**
+
+**Common Vendors:** Agilent, Thermo, Waters, Shimadzu.  
+**Typical Formats:** Agilent `.D`, Thermo RAW/SPC/SRS, Waters RAW, Shimadzu LCD.
+
+---
+
+# 4. Chromatography
+
+## 4.1 Liquid Chromatography
+- **HPLC**
+- **UHPLC**
+- **LC‑MS** (hybrid technique)
+
+## 4.2 Gas Chromatography
+- **GC**
+- **GC‑MS** (hybrid technique)
+
+## 4.3 Ion Chromatography (IC)
+
+**Common Vendors:** Agilent, Waters, Thermo, Shimadzu.  
+**Typical Formats:** Agilent `.D`, Waters RAW, Shimadzu LCD.
+
+---
+
+# 5. Electrochemistry
+
+## 5.1 Voltammetry
+- **Cyclic Voltammetry (CV)**
+- **Differential Pulse Voltammetry (DPV)**
+- **Square Wave Voltammetry (SWV)**
+
+## 5.2 Time‑domain Electrochemistry
+- **Chronoamperometry**
+- **Chronopotentiometry**
+
+**Common Vendors:** CH Instruments, Metrohm, Gamry.  
+**Typical Formats:** CSV, TXT, vendor‑specific binary.
+
+---
+
+# 6. Magnetic Resonance (Non‑NMR)
+
+## 6.1 Electron Paramagnetic Resonance (EPR)
+- Continuous Wave (CW‑EPR)
+- Pulse EPR
+
+**Common Vendors:** Bruker EMX/EleXsys.  
+**Typical Formats:** Bruker BES3T, ESP, proprietary binary.
+
+---
+
+# 7. Summary Table
+
+| Category            | Techniques Included                                                                 |
+|---------------------|--------------------------------------------------------------------------------------|
+| UV‑Vis              | Single‑scan, multi‑scan, kinetics, temperature‑dependent                             |
+| Fluorescence        | Steady‑state, EEM, TCSPC                                                             |
+| IR / FTIR           | FTIR, ATR‑FTIR, NIR                                                                  |
+| Raman               | Raman, resonance Raman, SERS                                                         |
+| NMR                 | 1H, 13C, DEPT, COSY, NOESY, ROESY, HSQC, HMBC, VT, T1/T2                             |
+| Mass Spectrometry   | ESI‑MS, MALDI‑TOF, TOF‑MS, MS/MS, HRMS                                               |
+| Chromatography      | HPLC, UHPLC, GC, IC, LC‑MS, GC‑MS                                                    |
+| Electrochemistry    | CV, DPV, SWV, chronoamperometry, chronopotentiometry                                 |
+| Magnetic Resonance  | CW‑EPR, Pulse EPR                                                                    |
+
+---
+
+# 8. Loader & Processor Mapping (High‑Level)
+
+Loaders are **vendor‑format‑specific**.  
+Processors are **technique‑specific**.
+
+Example:
+
+- Bruker OPUS → IR / Raman processors  
+- Agilent `.D` → UV‑Vis, Chrom, MS processors  
+- Bruker NMR → NMR processors  
+- Waters RAW → Chrom + MS processors  
+- JCAMP → UV‑Vis / IR / Raman processors  
+- CSV/XLSX → Any processor depending on metadata or classifier  
+
+---
+
+# 9. Versioning
+
+This document defines the **canonical technique universe for ChemWorkBench v2**.  
+Future versions (v3+) may add:
+
 - XRD  
-- XPS  
 - XRF  
-- TGA / DSC  
-
-## Imaging
-- MALDI Imaging  
-- MS Imaging  
-- Hyperspectral imaging  
-
-## Biophysics
-- SPR  
-- CD (Circular Dichroism)  
-
----
-
-# 9. Technique → File Format Coverage Map
-
-| Technique | Formats |
-|----------|---------|
-| NMR | Bruker (fid/ser/acqus), JEOL (.jdf), Varian (fid/procpar), JCAMP |
-| LC‑MS / GC‑MS | Agilent .d, Thermo .raw, Waters .raw directory, Shimadzu .lcd |
-| UV‑Vis | CSV, XLSX, JCAMP, SPC, SP, UV, UVS, Agilent .UV |
-| IR / FTIR | JCAMP, SPC, SPA, SP, OPUS |
-| Raman | JCAMP, SPC, DPT, RRUF, RRUF.GZ |
-| EPR / Pulse EPR | JCAMP, SPC, time‑domain binary formats |
-| Electrochemistry | CSV, TXT, XLSX |
-
----
-
-# 10. Integration Into the Architecture
-
-## File Sniffer
-Detects vendor + format → returns canonical format string.
-
-## Loaders
-Vendor‑specific loaders convert raw files → `{columns, data, metadata}`.
-
-## Cleaning Layer
-Normalizes all loader outputs into:
-- x array  
-- y array  
-- metadata  
-
-## Technique Classifier
-Maps cleaned data → technique (UV‑Vis, IR, Raman, NMR, MS, etc.)
-
-## Processors
-Technique‑specific processing:
-- peak detection  
-- baseline correction  
-- smoothing  
-- integration  
-- spectral math  
-- NMR FID → spectrum  
-- MS centroiding (optional v3)  
-- Pulse EPR time‑domain → frequency‑domain  
-
----
-
-# Summary
-
-Your updated technique universe now includes:
-
-- NMR (1D, 2D, DEPT, NOESY/ROESY)  
-- MS (LC‑MS, GC‑MS, ESI‑MS, TOF‑MS, HRMS, MS/MS)  
-- Chromatography (HPLC, GC, UHPLC)  
-- UV‑Vis + Fluorescence  
-- IR + FTIR  
-- Raman (including DPT, RRUF)  
-- **CW‑EPR + Pulse EPR**  
-- Electrochemistry (CV, DPV, SWV)  
-
-This is **industry‑grade coverage** for a v2 scientific SaaS platform.
+- ICP‑MS  
+- Imaging modalities (AFM, SEM, TEM)  
+- Hyphenated techniques (LC‑NMR, LC‑IR)  
