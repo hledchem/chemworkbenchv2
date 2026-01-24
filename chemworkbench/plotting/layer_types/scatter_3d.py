@@ -1,16 +1,16 @@
+# chemworkbench/plotting/layer_types/scatter_3d.py
+from __future__ import annotations
+
+from matplotlib.axes import Axes
+
 from chemworkbench.core.models import PlotLayerConfig
+from .surface import render as _render_surface
 
 
-def render_3d_scatter(ax, layer: PlotLayerConfig):
-    if layer.x is None or layer.y is None or layer.z is None:
-        return
+def render(ax: Axes, layer: PlotLayerConfig) -> None:
+    """
+    3D scatter layer.
 
-    ax.scatter3D(
-        layer.x,
-        layer.y,
-        layer.z,  # type: ignore[arg-type]
-        c=layer.color,
-        marker=layer.marker or "o",
-        s=(layer.markersize or 4.0) ** 2,
-        alpha=layer.alpha,
-    )
+    Delegates to the shared 3D surface module, which handles PlotType.SCATTER_3D.
+    """
+    _render_surface(ax, layer)
