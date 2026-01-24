@@ -1,17 +1,18 @@
 """
 Bruker vendor-specific loaders.
 
-This package provides loaders for:
-- Bruker OPUS spectral files (IR, FTIR, Raman, NIR)
-- Bruker TopSpin NMR datasets (1H, 13C, COSY, HSQC, HMBC, etc.)
-
-Each loader subclasses BaseVendorLoader and follows the canonical loader API.
+Includes:
+- BrukerOPUSLoader (IR/Raman)
+- BrukerNMRLoader (NMR directory format)
+- BrukerEPRLoader (EPR ESP / DTA+DSC)
 """
 
 from .bruker_opus_loader import BrukerOPUSLoader
 from .bruker_nmr_loader import BrukerNMRLoader
+from .bruker_epr_loader import BrukerEPRLoader
 
 __all__ = [
     "BrukerOPUSLoader",
     "BrukerNMRLoader",
+    "BrukerEPRLoader",
 ]
