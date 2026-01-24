@@ -87,6 +87,7 @@ chemworkbenchv2/
     │   │   │   ├── __init__.py
     │   │   │   ├── bruker_opus_loader.py
     │   │   │   └── bruker_nmr_loader.py
+                    bruker_epr_loader.py
     │   │
     │   │   ├── thermo/
     │   │   │   ├── __init__.py
@@ -125,20 +126,14 @@ chemworkbenchv2/
     │   │   │   ├── rruf_loader.py
     │   │   │   └── rruf_gz_loader.py
     │   │
-    │   │   # Fluorescence loaders (NEW)
-    │   │   ├── fluorescence/
-    │   │   │   ├── __init__.py
-    │   │   │   └── horiba_fluor_loader.py
-    │   │
-    │   │   # Electrochemistry loaders (NEW)
-    │   │   ├── echem/
-    │   │   │   ├── __init__.py
-    │   │   │   └── chi_dta_loader.py
-    │   │
-    │   │   # EPR loaders (NEW)
-    │   │   ├── epr/
-    │   │   │   ├── __init__.py
-    │   │   │   └── bruker_epr_loader.py
+            ├── horiba/
+            │   ├── __init__.py
+            │   └── horiba_fluor_loader.py
+                
+            ├── ch_instruments/
+            │   ├── __init__.py
+            │   └── chi_dta_loader.py
+
 
     # ------------------------------------------------------------
     # Plotting subsystem
