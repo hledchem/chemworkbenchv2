@@ -1,90 +1,88 @@
-ChemWorkBench v2 — Naming Conventions (Final, Authoritative Specification)
-Version: 2.0 (Frozen)
-Scope: All code, configs, processors, math utilities, pipeline hooks, models, plotting, services, plugins, runtime, documentation.
-These conventions are derived from the v2 codebase and are designed to:
-- prevent naming drift
-- ensure LLM‑compatibility
-- ensure architectural consistency
-- ensure extensibility
-- ensure UI‑friendliness
-- ensure schema‑driven behavior
-
-1. File & Folder Naming
-1.1 General Rules
-- All filenames use snake_case.
-- All folders use snake_case.
-- Names must be descriptive and avoid abbreviations unless universally understood.
-Examples
-math_spectral.py
-pipeline.py
-models.py
-processor.py
-plotting_engine.py
-uvvis_processor.py
 
 
+# ChemWorkBench v2 — Naming Conventions (Final, Authoritative Specification)
 
-1.2 Math Modules
+**Version:** 2.0  
+**Status:** Frozen  
+**Scope:** All code, configs, processors, math utilities, pipeline hooks, models, plotting, services, plugins, runtime, and documentation.
+
+These conventions ensure:
+- architectural consistency  
+- LLM‑friendly naming  
+- extensibility  
+- UI‑friendliness  
+- zero naming drift  
+
+---
+
+# 1. File & Folder Naming
+
+## 1.1 General Rules
+- All filenames use **snake_case**.
+- All folders use **snake_case**.
+- Names must be descriptive and avoid unnecessary abbreviations.
+
+### Examples
+
+
+math_spectral.py pipeline.py models.py processor.py plotting_engine.py uvvis_processor.py
+
+---
+
+## 1.2 Math Modules
 Pattern:
+
+
 math_<domain>.py
 
-
 Examples:
-math_spectral.py
-math_baseline.py
-math_peaks.py
-math_smoothing.py
-math_normalization.py
 
 
-This pattern is frozen.
+math_spectral.py math_baseline.py math_peaks.py math_smoothing.py math_normalization.py
 
-1.3 Processor Modules
+This pattern is **frozen**.
+
+---
+
+## 1.3 Processor Modules
 Processors live in:
-processors/<technique>/processor.py
-processors/<technique>/config.py
 
+
+processors/<technique>/processor.py processors/<technique>/config.py
 
 Examples:
-processors/uvvis/processor.py
-processors/uvvis/config.py
 
 
+processors/uvvis/processor.py processors/uvvis/config.py
 
-2. Class Naming
-2.1 Rules
-- All classes use PascalCase.
+---
+
+# 2. Class Naming
+
+## 2.1 Rules
+- All classes use **PascalCase**.
 - Class names must be nouns.
-- Structured return objects must end with Result.
-- Schema classes must end with Schema.
-- Builder classes must end with Builder.
-- Service classes must end with Service.
-2.2 Canonical Examples
-Technique
-PlotBackend
-PlotType
-PlotLayerConfig
-PlotConfig
-QCMetric
-ProcessedData
-BaseProcessorConfig
-PeakDetectionResult
-FigureSchema
-PanelSchema
-TraceSchema
-AnnotationSchema
-PlotConfigBuilder
-PlottingService
-RuntimeEnvironment
+- Structured return objects must end with **Result**.
+- Schema classes must end with **Schema**.
+- Builder classes must end with **Builder**.
+- Service classes must end with **Service**.
+
+## 2.2 Canonical Examples
 
 
+Technique PlotBackend PlotType PlotLayerConfig PlotConfig QCMetric ProcessedData BaseProcessorConfig PeakDetectionResult FigureSchema PanelSchema TraceSchema AnnotationSchema PlotConfigBuilder PlottingService RuntimeEnvironment
 
-3. Enum Naming
-3.1 Rules
-- Enum classes use PascalCase.
-- Enum members use UPPER_SNAKE_CASE.
-- Enum values use lower_snake_case.
-Example
+---
+
+# 3. Enum Naming
+
+## 3.1 Rules
+- Enum classes use **PascalCase**.
+- Enum members use **UPPER_SNAKE_CASE**.
+- Enum values use **lower_snake_case**.
+
+### Example
+``python
 class Technique(str, Enum):
     UV_VIS = "uv_vis"
     NMR = "nmr"
@@ -145,8 +143,7 @@ compute_qc
 "export"
 
 
-Rule:
-Hook names are verbs; step names are nouns.
+Rule: Hook names are verbs; step names are nouns.
 
 6. Config Naming
 6.1 Config Classes
@@ -244,8 +241,7 @@ normalize
 extra
 
 
-Rule:
-All plot config fields must be JSON-serializable.
+Rule: All plot config fields must be JSON-serializable.
 
 9. QC Metric Naming
 9.1 QCMetric Fields
@@ -262,8 +258,7 @@ qc = {
 }
 
 
-Rule:
-QC metric keys must be lower_snake_case.
+Rule: QC metric keys must be lower_snake_case.
 
 10. Variable Naming
 10.1 General Rules
@@ -329,8 +324,7 @@ GENERIC
 "generic"
 
 
-Rule:
-Technique identifiers must always use lower_snake_case in serialized form.
+Rule: Technique identifiers must always use lower_snake_case in serialized form.
 
 14. Reserved Words
 These names have special meaning and must not be reused:
@@ -448,6 +442,11 @@ JsonLoader
 YamlLoader
 Serializer
 VersionManager
+
+
+
+End of Document
+This naming convention is now frozen for ChemWorkBench v2.
 
 
 
