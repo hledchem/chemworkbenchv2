@@ -69,6 +69,12 @@ chemworkbenchv2/
     │   │   ├── contour.py
     │   │   ├── image.py
     │   │   └── surface.py
+                histogram.py
+                line_3d.py
+                pie.py
+                scatter_3d.py
+                surface_3d.py
+                wireframe_3d.py
     │
     │   # Declarative schema (NEW)
     │   ├── schema/
