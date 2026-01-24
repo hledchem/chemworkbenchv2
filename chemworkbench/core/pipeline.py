@@ -1,118 +1,50 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from pathlib import Path
 
-from chemworkbench.core.models import (
-    PipelineResult,
-    ProcessedData,
-)
-from chemworkbench.processors.base_processor import BaseProcessor
-from chemworkbench.plotting.builder.config_builder import PlotConfigBuilder
-from chemworkbench.plotting.schema.figure_schema import FigureSchema
+from .registry import LoaderRegistry
+from .routing import TechniqueRouter
+from chemworkbench.services.processing_service import ProcessingService
+from chemworkbench.services.plotting_service import PlottingService
 
 
 class Pipeline:
     """
-    ChemWorkBench v2 Pipeline
-
-    Executes a processor end-to-end using the standardized lifecycle:
-    load → validate → preprocess → process → postprocess → metadata → qc → plot → export
-
-    The pipeline is fully declarative, toggle-aware, and processor-agnostic.
+    Full backend pipeline:
+    file → loader → universal → processor → plot
     """
 
-    def __init__(self, processor: BaseProcessor):
-        self.processor = processor
+    def __init__(self):
+        self.loader_registry = LoaderRegistry()
+        self.router = TechniqueRouter()
+        self.processor_service = ProcessingService()
+        self.plotting_service = PlottingService()
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+    def run(self, path: Path, config: dict | None = None):
+        # 1. Pick loader
+        loader = self.loader_registry.sniff_loader(path)
 
-    def run(self, raw_input: Any) -> PipelineResult:
-        """
-        Execute the full pipeline and return a PipelineResult.
-        """
-        result = PipelineResult()
-        data = ProcessedData()
+        # 2. Load raw
+        raw = loader.load_raw(path)
 
-        try:
-            # ------------------------------------------------------------
-            # LOAD
-            # ------------------------------------------------------------
-            if self.processor.config.enable_load:
-                loaded = self.processor.load(raw_input)
-                data.raw_data = loaded if loaded is not None else raw_input
-            else:
-                data.raw_data = raw_input
+        # 3. Extract metadata
+        metadata = loader.extract_metadata(raw)
 
-            # ------------------------------------------------------------
-            # VALIDATE
-            # ------------------------------------------------------------
-            if self.processor.config.enable_validate:
-                self.processor.validate(data)
+        # 4. Normalize to universal model
+        universal = loader.to_universal(raw, metadata)
 
-            # ------------------------------------------------------------
-            # PREPROCESS
-            # ------------------------------------------------------------
-            if self.processor.config.enable_preprocess:
-                self.processor.preprocess(data)
+        # 5. Route to processor
+        processor = self.router.route(metadata)
 
-            # ------------------------------------------------------------
-            # PROCESS (required)
-            # ------------------------------------------------------------
-            if self.processor.config.enable_process:
-                self.processor.process(data)
+        # 6. Process
+        processed = self.processor_service.run(processor, universal, config)
 
-            # ------------------------------------------------------------
-            # POSTPROCESS
-            # ------------------------------------------------------------
-            if self.processor.config.enable_postprocess:
-                self.processor.postprocess(data)
+        # 7. Plot
+        figure = self.plotting_service.run(processed)
 
-            # ------------------------------------------------------------
-            # METADATA
-            # ------------------------------------------------------------
-            metadata = self.processor.build_metadata(data)
-            if metadata:
-                data.metadata.update(metadata)
-
-            # ------------------------------------------------------------
-            # QC METRICS
-            # ------------------------------------------------------------
-            qc = self.processor.compute_qc(data)
-            if qc:
-                data.qc.update(qc)
-
-            # ------------------------------------------------------------
-            # PLOTTING (NEW v2 architecture)
-            # ------------------------------------------------------------
-            if self.processor.config.enable_plot:
-                figure_schema = self.processor.make_plots(data)
-
-                if isinstance(figure_schema, FigureSchema):
-                    builder = PlotConfigBuilder()
-                    plot_configs = builder.build_from_figure(figure_schema)
-
-                    # Attach PlotConfig objects to the pipeline result
-                    result.plots = plot_configs
-
-                    # Also attach the schema for UI / JSON export
-                    result.figure_schema = figure_schema
-
-            # ------------------------------------------------------------
-            # EXPORT
-            # ------------------------------------------------------------
-            if self.processor.config.enable_export:
-                exported = self.processor.export(data)
-                if exported is not None:
-                    result.exported = exported
-
-            # Finalize
-            result.processed_data = data
-
-        except Exception as exc:
-            result.errors.append(
-                f"Error in pipeline for processor '{self.processor.__class__.__name__}': {exc}"
-            )
-
-        return result
+        return {
+            "metadata": metadata,
+            "universal": universal,
+            "processed": processed,
+            "figure": figure,
+        }
