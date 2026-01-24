@@ -1,80 +1,89 @@
-from typing import Dict, List
+from __future__ import annotations
 
-from chemworkbench.plotting.schema import FigureSchema, PanelSchema, TraceSchema
+import json
+from pathlib import Path
+from typing import Dict, Optional
+
+from chemworkbench.plotting.schema.figure_schema import FigureSchema
 
 
 class GraphRegistry:
     """
-    Registry for named graph templates.
+    Registry for declarative graph templates.
 
-    Keys are lower_snake_case strings (e.g. "uvvis_spectrum").
-    Values are callables or factories that return FigureSchema instances.
+    Templates are stored as JSON files in:
+        chemworkbench/plotting/registry/templates/
+
+    Keys are lower_snake_case identifiers, e.g.:
+        "uvvis_spectrum"
+        "multi_panel_dashboard"
+        "chromatogram"
+
+    The registry loads templates lazily and caches them.
     """
 
-    def __init__(self) -> None:
-        self._registry: Dict[str, FigureSchema] = {}
+    def __init__(self, template_dir: Optional[Path] = None):
+        if template_dir is None:
+            template_dir = Path(__file__).parent / "templates"
 
-    def register(self, name: str, figure_schema: FigureSchema) -> None:
-        if name in self._registry:
-            raise ValueError(f"Graph '{name}' is already registered")
-        self._registry[name] = figure_schema
+        self.template_dir: Path = template_dir
+        self._cache: Dict[str, FigureSchema] = {}
 
-    def get(self, name: str) -> FigureSchema:
-        try:
-            return self._registry[name]
-        except KeyError as exc:
-            raise KeyError(f"Graph '{name}' is not registered") from exc
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
-    def list_graphs(self) -> List[str]:
-        return sorted(self._registry.keys())
+    def list_templates(self) -> Dict[str, Path]:
+        """
+        Return a mapping of template keys → file paths.
+        """
+        templates = {}
+        for file in self.template_dir.glob("*.json"):
+            key = file.stem  # lower_snake_case
+            templates[key] = file
+        return templates
+
+    def get(self, key: str) -> FigureSchema:
+        """
+        Load a template by key and return a FigureSchema.
+
+        Templates are cached after first load.
+        """
+        key = key.lower()
+
+        if key in self._cache:
+            return self._cache[key]
+
+        file_path = self.template_dir / f"{key}.json"
+        if not file_path.exists():
+            raise KeyError(f"Graph template '{key}' not found in registry.")
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        schema = FigureSchema.from_dict(data)
+        self._cache[key] = schema
+        return schema
+
+    def reload(self) -> None:
+        """
+        Clear the cache and reload templates on next access.
+        """
+        self._cache.clear()
 
 
-_global_graph_registry: GraphRegistry | None = None
+# ----------------------------------------------------------------------
+# Global registry instance
+# ----------------------------------------------------------------------
+
+_global_registry: Optional[GraphRegistry] = None
 
 
 def get_global_graph_registry() -> GraphRegistry:
-    global _global_graph_registry
-    if _global_graph_registry is None:
-        _global_graph_registry = GraphRegistry()
-        _bootstrap_default_graphs(_global_graph_registry)
-    return _global_graph_registry
-
-
-def _bootstrap_default_graphs(registry: GraphRegistry) -> None:
     """
-    Register a few canonical graphs that processors and UIs can rely on.
+    Return the global GraphRegistry instance.
     """
-
-    # Simple UV-Vis spectrum
-    uvvis_figure = FigureSchema(
-        id="uvvis_spectrum",
-        title="UV-Vis Spectrum",
-        n_rows=1,
-        n_cols=1,
-        panels=[
-            PanelSchema(
-                id="main",
-                title="UV-Vis Spectrum",
-                x_label="Wavelength (nm)",
-                y_label="Absorbance (a.u.)",
-                row=0,
-                col=0,
-            )
-        ],
-    )
-    registry.register("uvvis_spectrum", uvvis_figure)
-
-    # Placeholder multi-panel dashboard
-    dashboard_figure = FigureSchema(
-        id="multi_panel_dashboard",
-        title="Multi-Panel Dashboard",
-        n_rows=2,
-        n_cols=2,
-        panels=[
-            PanelSchema(id="panel_1", row=0, col=0),
-            PanelSchema(id="panel_2", row=0, col=1),
-            PanelSchema(id="panel_3", row=1, col=0),
-            PanelSchema(id="panel_4", row=1, col=1),
-        ],
-    )
-    registry.register("multi_panel_dashboard", dashboard_figure)
+    global _global_registry
+    if _global_registry is None:
+        _global_registry = GraphRegistry()
+    return _global_registry
