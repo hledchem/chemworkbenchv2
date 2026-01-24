@@ -1,19 +1,16 @@
+# chemworkbench/plotting/layer_types/line_3d.py
+from __future__ import annotations
+
+from matplotlib.axes import Axes
+
 from chemworkbench.core.models import PlotLayerConfig
+from .surface import render as _render_surface
 
 
-def render_3d_line(ax, layer: PlotLayerConfig):
-    # For 3D line, we interpret:
-    # x, y, z as 1D arrays of equal length
-    if layer.x is None or layer.y is None or layer.z is None:
-        return
+def render(ax: Axes, layer: PlotLayerConfig) -> None:
+    """
+    3D line layer.
 
-    ax.plot3D(
-        layer.x,
-        layer.y,
-        layer.z,  # type: ignore[arg-type]
-        color=layer.color,
-        linewidth=layer.linewidth,
-        linestyle=layer.linestyle,
-        alpha=layer.alpha,
-        label=layer.label,
-    )
+    Delegates to the shared 3D surface module, which handles PlotType.LINE_3D.
+    """
+    _render_surface(ax, layer)
