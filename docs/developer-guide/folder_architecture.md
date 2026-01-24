@@ -43,6 +43,25 @@ chemworkbenchv2/
     │   ├── math_core.py
     │   ├── math_technique.py
     │   └── plotting_utils.py
+            file_sniffer/
+                core_detectors.py
+                file_sniffer.py
+                __init__.py
+                vendor/
+                    __init__.py
+                    agilent_detectors.py
+                    bruker_detectors.py
+                    jeol_detectors.py
+                    perkinelmer_detectors.py
+                    shimadzu_detectors.py
+                    thermo_detectors.py
+                    varian_detectors.py
+                    waters_detectors.py
+            loaders/
+                csv_loader.py
+                xlsx_loader.py
+                jcamp_loader.py
+                    
 
     # ------------------------------------------------------------
     # Plotting subsystem: 6-tier architecture (final)
