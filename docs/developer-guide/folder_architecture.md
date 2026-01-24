@@ -64,7 +64,7 @@ chemworkbenchv2/
     │   │       └── varian_detectors.py
 
     │   # --------------------------------------------------------
-    │   # Loaders (NEW: vendor-specific + universal loaders)
+    │   # Loaders (vendor-specific + universal + technique-specific)
     │   # --------------------------------------------------------
     │   ├── loaders/
     │   │   ├── __init__.py
@@ -74,14 +74,14 @@ chemworkbenchv2/
     │   │   ├── xlsx_loader.py
     │   │   ├── jcamp_loader.py
     │   │
-    │   │   # Vendor-specific loaders (NEW architecture)
+    │   │   # Vendor-specific loaders
     │   │   ├── agilent/
     │   │   │   ├── __init__.py
     │   │   │   ├── agilent_uv_loader.py
     │   │   │   ├── agilent_sp_loader.py
     │   │   │   ├── agilent_d_uvvis_loader.py
     │   │   │   ├── agilent_d_chrom_loader.py
-    │   │   │   └── agilent_d_ms_loader.py   # optional for v3
+    │   │   │   └── agilent_d_ms_loader.py
     │   │
     │   │   ├── bruker/
     │   │   │   ├── __init__.py
@@ -124,57 +124,32 @@ chemworkbenchv2/
     │   │   │   ├── dpt_loader.py
     │   │   │   ├── rruf_loader.py
     │   │   │   └── rruf_gz_loader.py
+    │   │
+    │   │   # Fluorescence loaders (NEW)
+    │   │   ├── fluorescence/
+    │   │   │   ├── __init__.py
+    │   │   │   └── horiba_fluor_loader.py
+    │   │
+    │   │   # Electrochemistry loaders (NEW)
+    │   │   ├── echem/
+    │   │   │   ├── __init__.py
+    │   │   │   └── chi_dta_loader.py
+    │   │
+    │   │   # EPR loaders (NEW)
+    │   │   ├── epr/
+    │   │   │   ├── __init__.py
+    │   │   │   └── bruker_epr_loader.py
 
     # ------------------------------------------------------------
-    # Plotting subsystem: 6-tier architecture
+    # Plotting subsystem
     # ------------------------------------------------------------
     ├── plotting/
     │   ├── __init__.py
-    │
     │   ├── engine/
-    │   │   ├── __init__.py
-    │   │   ├── base_engine.py
-    │   │   └── matplotlib_engine.py
-    │
     │   ├── layer_types/
-    │   │   ├── __init__.py
-    │   │   ├── line.py
-    │   │   ├── scatter.py
-    │   │   ├── bar.py
-    │   │   ├── stem.py
-    │   │   ├── step.py
-    │   │   ├── errorbar.py
-    │   │   ├── heatmap.py
-    │   │   ├── contour.py
-    │   │   ├── image.py
-    │   │   ├── surface.py
-    │   │   ├── histogram.py
-    │   │   ├── line_3d.py
-    │   │   ├── pie.py
-    │   │   ├── scatter_3d.py
-    │   │   ├── surface_3d.py
-    │   │   └── wireframe_3d.py
-    │
     │   ├── schema/
-    │   │   ├── __init__.py
-    │   │   ├── figure_schema.py
-    │   │   ├── panel_schema.py
-    │   │   ├── trace_schema.py
-    │   │   └── annotation_schema.py
-    │
     │   ├── builder/
-    │   │   ├── __init__.py
-    │   │   ├── config_builder.py
-    │   │   ├── defaults.py
-    │   │   └── validators.py
-    │
     │   └── registry/
-    │       ├── __init__.py
-    │       ├── graph_registry.py
-    │       └── templates/
-    │           ├── uvvis_spectrum.json
-    │           ├── multi_panel_dashboard.json
-    │           └── chromatogram.json
 
     # ------------------------------------------------------------
     # Services layer
