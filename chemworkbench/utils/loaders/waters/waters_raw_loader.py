@@ -34,7 +34,9 @@ class WatersRAWLoader(BaseVendorLoader):
     FORMAT = "raw"
     EXTENSIONS = (".raw",)
 
-    def sniff(self, path: Path) -> bool:
+    def sniff(self, path) -> bool:
+    path = Path(path)  # normalize input (string or Path)
+
         return path.is_dir() and path.suffix.lower() == ".raw"
 
     # -----------------------------
