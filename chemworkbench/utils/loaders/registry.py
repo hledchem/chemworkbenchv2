@@ -1,5 +1,3 @@
-# utils/loaders/loader_registry.py
-
 from __future__ import annotations
 
 from typing import Dict, Tuple, Type
@@ -11,10 +9,10 @@ from .base_loader import BaseVendorLoader
 # -------------------------
 
 # Agilent
-from .agilent.agilent_chrom_loader import AgilentChromLoader
+from .agilent.agilent_d_chrom_loader import AgilentDChromLoader
+from .agilent.agilent_d_ms_loader import AgilentDMSLoader
 from .agilent.agilent_d_uvvis_loader import AgilentDUVVisLoader
-from .agilent.agilent_ir_loader import AgilentIRLoader
-from .agilent.agilent_ms_loader import AgilentMSLoader
+from .agilent.agilent_sp_loader import AgilentSPLoader
 from .agilent.agilent_uv_loader import AgilentUVLoader
 
 # Bruker
@@ -71,10 +69,10 @@ LOADER_REGISTRY: Dict[Tuple[str, str], Type[BaseVendorLoader]] = {
     # -------------------------
     # Agilent
     # -------------------------
-    ("agilent", "chrom"): AgilentChromLoader,
+    ("agilent", "d_chrom"): AgilentDChromLoader,
+    ("agilent", "d_ms"): AgilentDMSLoader,
     ("agilent", "d_uvvis"): AgilentDUVVisLoader,
-    ("agilent", "ir"): AgilentIRLoader,
-    ("agilent", "ms"): AgilentMSLoader,
+    ("agilent", "sp"): AgilentSPLoader,
     ("agilent", "uv"): AgilentUVLoader,
 
     # -------------------------
