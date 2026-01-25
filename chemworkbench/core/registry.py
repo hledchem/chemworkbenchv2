@@ -6,9 +6,9 @@ Unified loader registry for ChemWorkBench v2.
 This registry maps:
     DetectedFormat → LoaderClass
 
-It supports:
-- universal loaders (CSV, JCAMP, XLSX, etc.)
-- vendor-specific loaders (Agilent, Bruker, Horiba, etc.)
+Supports:
+- universal loaders
+- vendor-specific loaders
 - plugin loaders
 - technique-aware resolution
 """
@@ -18,48 +18,92 @@ from typing import Dict, Type, Optional
 
 from chemworkbench.core.models import DetectedFormat, Technique
 
+# ----------------------------------------------------------------------
 # Universal loaders
+# ----------------------------------------------------------------------
+
 from chemworkbench.utils.loaders.csv_loader import CSVLoader
 from chemworkbench.utils.loaders.xlsx_loader import XLSXLoader
 from chemworkbench.utils.loaders.jcamp_loader import JCAMPLoader
 
-# Vendor loaders
+# ----------------------------------------------------------------------
+# Agilent loaders
+# ----------------------------------------------------------------------
+
 from chemworkbench.utils.loaders.agilent.agilent_uv_loader import AgilentUVLoader
 from chemworkbench.utils.loaders.agilent.agilent_sp_loader import AgilentSPLoader
 from chemworkbench.utils.loaders.agilent.agilent_d_uvvis_loader import AgilentDUVVisLoader
 from chemworkbench.utils.loaders.agilent.agilent_d_chrom_loader import AgilentDChromLoader
 from chemworkbench.utils.loaders.agilent.agilent_d_ms_loader import AgilentDMSLoader
 
+# ----------------------------------------------------------------------
+# Bruker loaders
+# ----------------------------------------------------------------------
+
 from chemworkbench.utils.loaders.bruker.bruker_opus_loader import BrukerOPUSLoader
 from chemworkbench.utils.loaders.bruker.bruker_nmr_loader import BrukerNMRLoader
 from chemworkbench.utils.loaders.bruker.bruker_epr_loader import BrukerEPRLoader
 
+# ----------------------------------------------------------------------
+# Thermo loaders
+# ----------------------------------------------------------------------
+
 from chemworkbench.utils.loaders.thermo.thermo_spa_loader import ThermoSPALoader
 from chemworkbench.utils.loaders.thermo.thermo_spc_loader import ThermoSPCLoader
 from chemworkbench.utils.loaders.thermo.thermo_srs_loader import ThermoSRSLoader
+
+# ----------------------------------------------------------------------
+# Shimadzu loaders
+# ----------------------------------------------------------------------
 
 from chemworkbench.utils.loaders.shimadzu.shimadzu_spc_loader import ShimadzuSPCLoader
 from chemworkbench.utils.loaders.shimadzu.shimadzu_irx_loader import ShimadzuIRXLoader
 from chemworkbench.utils.loaders.shimadzu.shimadzu_uvs_loader import ShimadzuUVSLoader
 from chemworkbench.utils.loaders.shimadzu.shimadzu_lcd_loader import ShimadzuLCDLoader
 
+# ----------------------------------------------------------------------
+# PerkinElmer loaders
+# ----------------------------------------------------------------------
+
 from chemworkbench.utils.loaders.perkinelmer.perkinelmer_sp_loader import PerkinElmerSPLoader
 from chemworkbench.utils.loaders.perkinelmer.perkinelmer_spc_loader import PerkinElmerSPCLoader
 
+# ----------------------------------------------------------------------
+# Waters loaders
+# ----------------------------------------------------------------------
+
 from chemworkbench.utils.loaders.waters.waters_raw_loader import WatersRAWLoader
 
+# ----------------------------------------------------------------------
+# JEOL loaders
+# ----------------------------------------------------------------------
+
 from chemworkbench.utils.loaders.jeol.jeol_jdf_loader import JEOLJDFLoader
+
+# ----------------------------------------------------------------------
+# Varian loaders
+# ----------------------------------------------------------------------
+
 from chemworkbench.utils.loaders.varian.varian_nmr_loader import VarianNMRLoader
 
+# ----------------------------------------------------------------------
 # Raman loaders
+# ----------------------------------------------------------------------
+
 from chemworkbench.utils.loaders.raman.dpt_loader import DPTLoader
-from chemworkbench.utils.loaders.raman.rruf_loader import RRUfLoader
-from chemworkbench.utils.loaders.raman.rruf_gz_loader import RRUfGZLoader
+from chemworkbench.utils.loaders.raman.rruf_loader import RRUFFLoader
+from chemworkbench.utils.loaders.raman.rruf_gz_loader import RRUFFGZLoader
 
+# ----------------------------------------------------------------------
 # Horiba fluorescence
-from chemworkbench.utils.loaders.horiba.horiba_fluor_loader import HoribaFluorLoader
+# ----------------------------------------------------------------------
 
-# CH Instruments electrochemistry
+from chemworkbench.utils.loaders.horiba.horiba_fluor_loader import HoribaFluorescenceLoader
+
+# ----------------------------------------------------------------------
+# CH Instruments
+# ----------------------------------------------------------------------
+
 from chemworkbench.utils.loaders.ch_instruments.chi_dta_loader import CHIDTALoader
 
 
@@ -70,13 +114,12 @@ from chemworkbench.utils.loaders.ch_instruments.chi_dta_loader import CHIDTALoad
 class LoaderRegistry:
     """
     Central registry for all loaders.
-    Maps (vendor, technique, subtype) → LoaderClass
+    Maps canonical keys → LoaderClass
     """
 
     def __init__(self):
         self._registry: Dict[str, Type] = {}
         self._plugins: Dict[str, Type] = {}
-
         self._register_builtin_loaders()
 
     # ------------------------------------------------------------------
@@ -84,11 +127,9 @@ class LoaderRegistry:
     # ------------------------------------------------------------------
 
     def register(self, key: str, loader_cls: Type):
-        """Register a loader class under a canonical key."""
         self._registry[key] = loader_cls
 
     def register_plugin(self, key: str, loader_cls: Type):
-        """Register a plugin loader."""
         self._plugins[key] = loader_cls
 
     # ------------------------------------------------------------------
@@ -96,10 +137,11 @@ class LoaderRegistry:
     # ------------------------------------------------------------------
 
     def _register_builtin_loaders(self):
+
         # Universal
         self.register("csv", CSVLoader)
         self.register("xlsx", XLSXLoader)
-        self.register("jcamp_dx", JCAMPDXLoader)
+        self.register("jcamp", JCAMPLoader)
 
         # Agilent
         self.register("agilent_uv", AgilentUVLoader)
@@ -109,7 +151,7 @@ class LoaderRegistry:
         self.register("agilent_d_ms", AgilentDMSLoader)
 
         # Bruker
-        self.register("bruker_opus", BrukerOpusLoader)
+        self.register("bruker_opus", BrukerOPUSLoader)
         self.register("bruker_nmr", BrukerNMRLoader)
         self.register("bruker_epr", BrukerEPRLoader)
 
@@ -139,11 +181,11 @@ class LoaderRegistry:
 
         # Raman
         self.register("raman_dpt", DPTLoader)
-        self.register("raman_rruf", RRUfLoader)
-        self.register("raman_rruf_gz", RRUfGZLoader)
+        self.register("raman_rruf", RRUFFLoader)
+        self.register("raman_rruf_gz", RRUFFGZLoader)
 
         # Horiba
-        self.register("horiba_fluor", HoribaFluorLoader)
+        self.register("horiba_fluor", HoribaFluorescenceLoader)
 
         # CH Instruments
         self.register("chi_dta", CHIDTALoader)
@@ -153,33 +195,29 @@ class LoaderRegistry:
     # ------------------------------------------------------------------
 
     def resolve_loader(self, fmt: DetectedFormat) -> Optional[Type]:
-        """
-        Resolve a loader class from a DetectedFormat.
-        """
 
-        # 1. Try vendor + subtype
+        # 1. vendor + subtype
         if fmt.vendor and fmt.subtype:
             key = f"{fmt.vendor.lower()}_{fmt.subtype.lower()}"
             if key in self._registry:
                 return self._registry[key]
 
-        # 2. Try vendor + technique
+        # 2. vendor + technique
         if fmt.vendor:
             key = f"{fmt.vendor.lower()}_{fmt.technique.value}"
             if key in self._registry:
                 return self._registry[key]
 
-        # 3. Try technique-only loaders
+        # 3. technique-only
         key = fmt.technique.value
         if key in self._registry:
             return self._registry[key]
 
-        # 4. Try plugins
+        # 4. plugins
         for key, cls in self._plugins.items():
             if key.startswith(fmt.vendor or ""):
                 return cls
 
-        # 5. No match
         return None
 
 
