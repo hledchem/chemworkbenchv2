@@ -145,3 +145,14 @@ class Pipeline:
 # ----------------------------------------------------------------------
 
 pipeline = Pipeline()
+
+# ----------------------------------------------------------------------
+# Backwards-compatible functional entrypoint for tests and CLI
+# ----------------------------------------------------------------------
+
+def run_pipeline(path: str | Path) -> PipelineResult:
+    """
+    Thin wrapper around the Pipeline singleton to maintain compatibility
+    with tests and external callers expecting a module-level function.
+    """
+    return pipeline.run(path)
