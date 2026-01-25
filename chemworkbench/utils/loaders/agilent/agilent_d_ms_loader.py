@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping, List, Dict
 
+from chemworkbench.core.models import Technique
+
 from ..base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -40,7 +42,9 @@ class AgilentDMSLoader(BaseVendorLoader):
         try:
             ms_files = self._find_ms_files(path)
             if not ms_files:
-                raise LoaderReadError(f"No MS files found in Agilent .D directory '{path}'")
+                raise LoaderReadError(
+                    f"No MS files found in Agilent .D directory '{path}'"
+                )
 
             spectra: Dict[str, Dict[str, Any]] = {}
 
@@ -70,8 +74,11 @@ class AgilentDMSLoader(BaseVendorLoader):
                 "spectra": spectra,
                 "directory": str(path),
             }
+
         except Exception as exc:
-            raise LoaderReadError(f"Failed to read Agilent .D MS directory '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to read Agilent .D MS directory '{path}': {exc}"
+            ) from exc
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
@@ -82,10 +89,12 @@ class AgilentDMSLoader(BaseVendorLoader):
                 "num_spectra": len(specs),
                 "spectrum_names": list(specs.keys()),
                 "directory": raw_data.get("directory"),
-                "technique": "ms",
+                "technique": Technique.MS,
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract metadata from Agilent .D MS: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract metadata from Agilent .D MS: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
@@ -95,4 +104,6 @@ class AgilentDMSLoader(BaseVendorLoader):
                 "axis_units": {"x": "m/z", "y": "intensity"},
             }
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize Agilent .D MS data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize Agilent .D MS data: {exc}"
+            ) from exc
