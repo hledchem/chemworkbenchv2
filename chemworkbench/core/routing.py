@@ -57,7 +57,7 @@ class TechniqueRouter:
     # ------------------------------------------------------------------
 
     def _register_builtin_routes(self):
-        # UV-Vis
+        # UVVis
         self.register(Technique.UVVIS, UVVisProcessor)
 
         # Future techniques (enable when implemented)
