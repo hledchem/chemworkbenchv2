@@ -36,17 +36,21 @@ class CSVLoader(BaseVendorLoader):
                 reader = csv.DictReader(f)
                 return list(reader)
         except Exception as exc:
-            raise LoaderReadError(f"Failed to read CSV file '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to read CSV file '{path}': {exc}"
+            ) from exc
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
             return {
-                "format": "csv",
+                "format": self.FORMAT,
                 "num_rows": len(raw_data),
                 "num_columns": len(raw_data[0]) if raw_data else 0,
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract CSV metadata: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract CSV metadata: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         """
@@ -56,4 +60,6 @@ class CSVLoader(BaseVendorLoader):
         try:
             return raw_data
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize CSV data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize CSV data: {exc}"
+            ) from exc
