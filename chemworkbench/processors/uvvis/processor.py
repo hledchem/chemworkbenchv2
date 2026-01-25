@@ -75,13 +75,20 @@ class UVVisProcessor:
         x_arr = np.asarray(data["x"], dtype=float)
         y_arr = np.asarray(data["y"], dtype=float)
 
+        # -----------------------------------------------------------------
+        # Backward compatibility shim for old peak detection method names
+        # -----------------------------------------------------------------
+        method = config.peak_method.lower()
+        if method == "height":          # old v1 method name
+            method = "local_maxima"     # new v2.1 method name
+
         # Peak detection
         peak_results_dict: Optional[Dict[str, Any]] = None
         if config.detect_peaks:
             peaks_result = detect_peaks(
                 x_arr,
                 y_arr,
-                method=config.peak_method,
+                method=method,
                 height=config.peak_height,
                 rel_height=config.peak_rel_height,
                 min_prominence=config.peak_min_prominence,
@@ -224,81 +231,15 @@ class UVVisProcessor:
             qc["max_abs_signal"] = QCMetric(
                 name="max_abs_signal",
                 value=max_val,
-                description="Maximum absolute signal value after preprocessing.",
+                description="Maximum absolute signal value.",
             )
             qc["rms_signal"] = QCMetric(
                 name="rms_signal",
                 value=rms,
-                description="Root-mean-square of the processed signal.",
+                description="Root-mean-square of the signal.",
             )
 
         return qc
-
-    def make_plots(
-        self,
-        data: Any,
-        config: BaseProcessorConfig,
-    ) -> List[PlotConfig]:
-
-        if isinstance(data, dict) and "x" in data:
-            x_arr = np.asarray(data["x"], dtype=float)
-            y_arr = np.asarray(data["y"], dtype=float)
-            baseline_arr = np.asarray(data["baseline"], dtype=float) if "baseline" in data else None
-            y_raw = np.asarray(data["y_raw"], dtype=float) if "y_raw" in data else None
-        else:
-            x_arr, y_arr = self._extract_xy(data)
-            baseline_arr = None
-            y_raw = None
-
-        layers: List[PlotLayerConfig] = []
-
-        if y_raw is not None:
-            layers.append(
-                PlotLayerConfig(
-                    label="raw",
-                    plot_type=PlotType.LINE,
-                    x=x_arr.tolist(),
-                    y=y_raw.tolist(),
-                    color="gray",
-                    linewidth=1.0,
-                    alpha=0.5,
-                )
-            )
-
-        layers.append(
-            PlotLayerConfig(
-                label="processed",
-                plot_type=PlotType.LINE,
-                x=x_arr.tolist(),
-                y=y_arr.tolist(),
-                color="blue",
-                linewidth=1.5,
-                alpha=1.0,
-            )
-        )
-
-        if baseline_arr is not None:
-            layers.append(
-                PlotLayerConfig(
-                    label="baseline",
-                    plot_type=PlotType.LINE,
-                    x=x_arr.tolist(),
-                    y=baseline_arr.tolist(),
-                    color="red",
-                    linewidth=1.0,
-                    alpha=0.7,
-                )
-            )
-
-        return [
-            PlotConfig(
-                plot_type="line",
-                title="UV-Vis Spectrum",
-                x=x_arr.tolist(),
-                y=y_arr.tolist(),
-                metadata={"layers": layers},
-            )
-        ]
 
     # ---------------------------------------------------------------------
     # Helpers
@@ -306,12 +247,15 @@ class UVVisProcessor:
     def _extract_xy(self, data: Any) -> Tuple[np.ndarray, np.ndarray]:
         if isinstance(data, dict) and "x" in data and "y" in data:
             return np.asarray(data["x"], dtype=float), np.asarray(data["y"], dtype=float)
-        raise TypeError("UVVisProcessor expects data with 'x' and 'y' arrays.")
+        raise TypeError("Data must contain 'x' and 'y' arrays.")
 
     def _peak_result_to_dict(self, peaks_result: Any) -> Dict[str, Any]:
         if peaks_result is None:
             return {}
         return {
-            "peaks": peaks_result.peaks.tolist() if hasattr(peaks_result, "peaks") else [],
-            "properties": getattr(peaks_result, "properties", {}),
+            "indices": peaks_result.indices.tolist(),
+            "positions": peaks_result.positions.tolist(),
+            "heights": peaks_result.heights.tolist(),
+            "prominences": peaks_result.prominences.tolist(),
+            "widths": peaks_result.widths.tolist(),
         }
