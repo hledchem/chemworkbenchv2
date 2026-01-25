@@ -26,8 +26,8 @@ class AgilentSPLoader(BaseVendorLoader):
     EXTENSIONS = (".sp",)
 
     def sniff(self, path) -> bool:
-    path = Path(path)  # normalize input (string or Path)
-    return path.suffix.lower() == ".sp"
+        path = Path(path)  # normalize input (string or Path)
+        return path.suffix.lower() == ".sp"
 
     def load_raw(self, path: Path) -> Any:
         try:
