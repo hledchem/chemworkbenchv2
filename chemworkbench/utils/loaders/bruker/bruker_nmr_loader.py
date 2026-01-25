@@ -1,5 +1,3 @@
-# utils/loaders/bruker/bruker_nmr_loader.py
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -33,14 +31,14 @@ class BrukerNMRLoader(BaseVendorLoader):
     FORMAT = "nmr"
     EXTENSIONS = (".fid", "")  # directories have no suffix
 
-   def sniff(self, path) -> bool:
-    path = Path(path)  # normalize input (string or Path)
+    def sniff(self, path) -> bool:
+        path = Path(path)  # normalize input (string or Path)
 
-    # Bruker NMR datasets are directories containing 'fid' and 'acqus'
-    if not path.is_dir():
-        return False
+        # Bruker NMR datasets are directories containing 'fid' and 'acqus'
+        if not path.is_dir():
+            return False
 
-    return (path / "fid").exists() and (path / "acqus").exists()
+        return (path / "fid").exists() and (path / "acqus").exists()
 
     # -----------------------------
     # Helpers
@@ -66,7 +64,6 @@ class BrukerNMRLoader(BaseVendorLoader):
         try:
             with path.open("rb") as f:
                 data = f.read()
-            # Placeholder: interpret as signed 32-bit integers
             import struct
             count = len(data) // 4
             return list(struct.unpack(f">{count}i", data[: count * 4]))
