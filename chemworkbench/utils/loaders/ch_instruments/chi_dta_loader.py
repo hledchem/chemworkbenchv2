@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping
 
+from chemworkbench.core.models import Technique
+
 from ..base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -53,7 +55,9 @@ class CHIDTALoader(BaseVendorLoader):
             return {"x": x_vals, "y": y_vals, "path": str(path)}
 
         except Exception as exc:
-            raise LoaderReadError(f"Failed to read CHI .DTA file '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to read CHI .DTA file '{path}': {exc}"
+            ) from exc
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
@@ -61,10 +65,12 @@ class CHIDTALoader(BaseVendorLoader):
                 "vendor": self.VENDOR,
                 "format": self.FORMAT,
                 "num_points": len(raw_data["x"]),
-                "technique": "electrochemistry",
+                "technique": Technique.CV,
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract metadata from CHI .DTA: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract metadata from CHI .DTA: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
@@ -75,4 +81,6 @@ class CHIDTALoader(BaseVendorLoader):
                 "axis_units": {"x": "V", "y": "A"},
             }
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize CHI .DTA data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize CHI .DTA data: {exc}"
+            ) from exc
