@@ -24,7 +24,7 @@ from .core_detectors import detect_by_extension, detect_magic_bytes
 from .spectral_detectors import infer_technique_from_data
 
 # Tier 3: loader registry
-from utils.loaders.loader_registry import iter_loaders
+from chemworkbench.utils.loaders.loader_registry import iter_loaders
 
 
 # ------------------------------------------------------------
