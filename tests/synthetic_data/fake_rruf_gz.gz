@@ -1,0 +1,3 @@
+import gzip
+with gzip.open("fake_rruff_gz.gz", "wt") as f:
+    f.write("RRUFF Raman Spectrum\n100 5\n200 10\n")
