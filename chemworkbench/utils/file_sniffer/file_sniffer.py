@@ -4,9 +4,9 @@ utils/file_sniffer/file_sniffer.py
 ChemWorkBench v2 unified file sniffer.
 This module performs 3-tier detection:
 
-1. Core detectors (extension, magic bytes, directory structure)
+1. Core detectors (extension, magic bytes)
 2. Spectral detectors (technique-level inference)
-3. Vendor-specific detectors (Agilent, Bruker, Thermo, etc.)
+3. Loader-based vendor/format sniffing (registry-driven)
 
 Output: DetectedFormat(vendor, technique, subtype, confidence)
 """
@@ -23,23 +23,15 @@ from .core_detectors import detect_by_extension, detect_magic_bytes
 # Tier 2 detectors
 from .spectral_detectors import infer_technique_from_data
 
-# Tier 3 vendor detectors
-from .vendor.agilent_detectors import detect_agilent
-from .vendor.bruker_detectors import detect_bruker
-from .vendor.thermo_detectors import detect_thermo
-from .vendor.shimadzu_detectors import detect_shimadzu
-from .vendor.perkinelmer_detectors import detect_perkinelmer
-from .vendor.waters_detectors import detect_waters
-from .vendor.jeol_detectors import detect_jeol
-from .vendor.varian_detectors import detect_varian
+# Tier 3: loader registry
+from utils.loaders.loader_registry import iter_loaders
 
 
 # ------------------------------------------------------------
-# Utility: combine multiple detection candidates
+# Utility: choose highest-confidence candidate
 # ------------------------------------------------------------
 
 def _best_candidate(candidates: List[DetectedFormat]) -> DetectedFormat:
-    """Return the highest-confidence detection result."""
     if not candidates:
         return DetectedFormat(
             vendor=None,
@@ -88,27 +80,22 @@ def sniff_file(path: str) -> DetectedFormat:
         candidates.append(technique_candidate)
 
     # --------------------------------------------------------
-    # Tier 3: Vendor-specific detection
+    # Tier 3: Loader-based sniffing (registry-driven)
     # --------------------------------------------------------
-    vendor_detectors = [
-        detect_agilent,
-        detect_bruker,
-        detect_thermo,
-        detect_shimadzu,
-        detect_perkinelmer,
-        detect_waters,
-        detect_jeol,
-        detect_varian,
-    ]
-
-    for detector in vendor_detectors:
+    for loader in iter_loaders():
         try:
-            vendor_candidate = detector(path)
-            if vendor_candidate:
-                candidates.append(vendor_candidate)
+            if loader.sniff(path):
+                # Loader sniffing is strong evidence → high confidence
+                candidates.append(
+                    DetectedFormat(
+                        vendor=loader.VENDOR,
+                        technique=Technique.UNKNOWN,
+                        subtype=loader.FORMAT,
+                        confidence=0.90,
+                    )
+                )
         except Exception:
-            # Vendor detectors should never crash the sniffer
-            continue
+            continue  # Loaders must never break the sniffer
 
     # --------------------------------------------------------
     # Final selection
@@ -135,7 +122,7 @@ def _infer_default_technique_for_vendor(vendor: str) -> Technique:
         return Technique.NMR
     if vendor == "horiba":
         return Technique.FLUORESCENCE
-    if vendor == "chi":
+    if vendor == "ch_instruments":
         return Technique.CV
     if vendor == "waters":
         return Technique.LCMS
@@ -149,5 +136,7 @@ def _infer_default_technique_for_vendor(vendor: str) -> Technique:
         return Technique.NMR
     if vendor == "varian":
         return Technique.NMR
+    if vendor == "raman":
+        return Technique.RAMAN
 
     return Technique.UNKNOWN
