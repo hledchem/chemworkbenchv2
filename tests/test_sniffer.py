@@ -1,6 +1,6 @@
 import os
 from chemworkbench.core.models import Technique
-from utils.file_sniffer.file_sniffer import sniff_file
+from chemworkbench.utils.file_sniffer.file_sniffer import sniff_file
 
 def test_sniffer_unknown_file(tmp_path):
     p = tmp_path / "empty.xyz"
