@@ -1,223 +1,118 @@
+"""
+core/models.py
+
+Shared data structures for ChemWorkBench v2.
+These models define the contract between:
+- file sniffer
+- loader registry
+- vendor loaders
+- technique router
+- processing pipeline
+- processors
+- plotting subsystem
+"""
+
 from __future__ import annotations
-
-from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
-
-from pydantic import BaseModel, Field
+from dataclasses import dataclass, field
+from enum import Enum, auto
+from typing import Any, Dict, List, Optional
 
 
 # ------------------------------------------------------------
-# Core enums
+# Technique Enumeration
 # ------------------------------------------------------------
 
-class Technique(str, Enum):
-    GENERIC = "generic"
-    UV_VIS = "uvvis"
-    IR = "ir"
-    NMR = "nmr"
-    RAMAN = "raman"
-    CV = "cv"
-    EPR = "epr"
-    GCMS = "gcms"
-    LCMS = "lcms"
-
-
-class PlotBackend(str, Enum):
-    NONE = "none"
-    MATPLOTLIB = "matplotlib"
-    # PLOTLY = "plotly"  # future
-    # BOKEH = "bokeh"    # future
-
-
-class PlotType(str, Enum):
-    # 2D
-    LINE = "line"
-    SCATTER = "scatter"
-    BAR = "bar"
-    STEM = "stem"
-    STEP = "step"
-    ERRORBAR = "errorbar"
-    HEATMAP = "heatmap"
-    CONTOUR = "contour"
-    IMAGE = "image"
-    PIE = "pie"
-    HISTOGRAM = "histogram"
-
-    # 3D
-    LINE_3D = "line_3d"
-    SCATTER_3D = "scatter_3d"
-    SURFACE_3D = "surface_3d"
-    WIREFRAME_3D = "wireframe_3d"
+class Technique(Enum):
+    UVVIS = auto()
+    FLUORESCENCE = auto()
+    IR = auto()
+    RAMAN = auto()
+    NMR = auto()
+    EPR = auto()
+    CV = auto()
+    GCMS = auto()
+    LCMS = auto()
+    CHROMATOGRAPHY = auto()
+    UNKNOWN = auto()
 
 
 # ------------------------------------------------------------
-# Base processor config
+# File Detection Result (output of file sniffer)
 # ------------------------------------------------------------
 
-class BaseProcessorConfig(BaseModel):
-    """Base configuration shared by all processors."""
+@dataclass
+class DetectedFormat:
+    vendor: Optional[str]          # e.g., "Agilent", "Bruker", "Horiba"
+    technique: Technique           # e.g., Technique.UVVIS
+    subtype: Optional[str] = None  # e.g., "DAD", "OPUS", "SPA"
+    confidence: float = 1.0        # sniffer confidence score (0–1)
 
-    name: str = Field(default="default", description="Human-readable name for this config.")
-    version: str = Field(default="1.0.0", description="Config schema version.")
-
-    # Pipeline toggles
-    enable_load: bool = True
-    enable_validate: bool = True
-    enable_preprocess: bool = True
-    enable_process: bool = True
-    enable_postprocess: bool = True
-    enable_plot: bool = True
-    enable_export: bool = False
-
-    # Extra technique-specific options
-    extra: Dict[str, Any] = Field(default_factory=dict)
-
-    class Config:
-        extra = "ignore"
+    def is_confident(self) -> bool:
+        return self.confidence >= 0.75
 
 
 # ------------------------------------------------------------
-# QC metrics
+# Raw Data Bundle (output of loaders)
 # ------------------------------------------------------------
 
-class QCMetric(BaseModel):
-    """Quality control metric with description."""
+@dataclass
+class RawDataBundle:
+    technique: Technique
+    data: Any                      # vendor-specific raw data structure
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    source_path: Optional[str] = None
 
-    value: float
-    description: str
+    def require(self, key: str) -> Any:
+        """Convenience accessor for required metadata fields."""
+        if key not in self.metadata:
+            raise KeyError(f"Missing required metadata field: {key}")
+        return self.metadata[key]
 
 
 # ------------------------------------------------------------
-# Plot models
+# Processed Data Bundle (output of processors)
 # ------------------------------------------------------------
 
-class PlotLayerConfig(BaseModel):
-    """Configuration for a single plot layer."""
+@dataclass
+class ProcessedData:
+    technique: Technique
+    processed: Any                 # normalized, cleaned, structured data
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    plots: List["PlotConfig"] = field(default_factory=list)
 
-    # Core
-    plot_type: PlotType
-    label: Optional[str] = None
 
-    # Panel index (for multi-panel figures; 0-based)
-    panel: int = 0
+# ------------------------------------------------------------
+# Plot Configuration (input to plotting engine)
+# ------------------------------------------------------------
 
-    # Data
+@dataclass
+class PlotConfig:
+    plot_type: str                 # e.g., "line", "scatter", "heatmap"
+    title: Optional[str] = None
     x: Optional[List[float]] = None
     y: Optional[List[float]] = None
-    # For heatmaps / images / surfaces: z can be 1D or 2D
-    z: Optional[Union[List[float], List[List[float]]]] = None
+    z: Optional[List[List[float]]] = None  # for 2D maps
+    style: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-    # Error bars
-    yerr: Optional[List[float]] = None
-    xerr: Optional[List[float]] = None
-
-    # Styling
-    color: Optional[str] = None
-    linewidth: float = 1.5
-    linestyle: str = "-"
-    marker: Optional[str] = None
-    markersize: Optional[float] = None
-    alpha: float = 1.0
-    cmap: Optional[str] = "viridis"
-
-    # Bar / histogram
-    width: Optional[float] = None
-    bins: Optional[int] = None
-    stacked: bool = False
-
-    # Pie
-    labels: Optional[List[str]] = None
-    explode: Optional[List[float]] = None
-    normalize: bool = True
-
-    # 3D
-    is_3d: bool = False
-
-    # Layer ordering and visibility
-    zorder: Optional[int] = None
-    visible: bool = True
-
-    # Extra options for UI/backends
-    extra: Dict[str, Any] = Field(default_factory=dict)
-
-
-class PlotConfig(BaseModel):
-    """High-level plot configuration, backend-agnostic."""
-
-    id: str
-    title: str = ""
-    x_label: str = ""
-    y_label: str = ""
-    z_label: str = ""
-
-    backend: PlotBackend = PlotBackend.NONE
-
-    # Figure layout
-    figsize: Tuple[float, float] = (6.0, 4.0)
-    is_3d: bool = False
-
-    # Subplot grid (for multi-panel figures)
-    nrows: int = 1
-    ncols: int = 1
-    sharex: bool = False
-    sharey: bool = False
-
-    # Axes options
-    x_scale: str = "linear"
-    y_scale: str = "linear"
-    z_scale: str = "linear"
-
-    x_limits: Optional[Tuple[float, float]] = None
-    y_limits: Optional[Tuple[float, float]] = None
-    z_limits: Optional[Tuple[float, float]] = None
-
-    # Layers
-    layers: List[PlotLayerConfig] = Field(default_factory=list)
-
-    # Layout metadata for multi-panel figures (figure + panel info)
-    layout: Dict[str, Any] = Field(default_factory=dict)
-
-    # Extra options for UI/backends
-    extra: Dict[str, Any] = Field(default_factory=dict)
+    def require_xy(self):
+        if self.x is None or self.y is None:
+            raise ValueError("PlotConfig requires x and y arrays for this plot type.")
 
 
 # ------------------------------------------------------------
-# Processed data + pipeline result
+# Pipeline Result (final output)
 # ------------------------------------------------------------
 
-class ProcessedData(BaseModel):
-    """
-    Canonical container for processed numerical data.
+@dataclass
+class PipelineResult:
+    raw: RawDataBundle
+    processed: ProcessedData
+    plots: List[PlotConfig]
 
-    This is intentionally flexible and JSON-serializable.
-    """
-
-    # Core arrays
-    x: Optional[List[float]] = None
-    y: Optional[List[float]] = None
-
-    # Raw data
-    x_raw: Optional[List[float]] = None
-    y_raw: Optional[List[float]] = None
-
-    # Intermediate arrays (UV-Vis example)
-    baseline: Optional[List[float]] = None
-    y_corrected: Optional[List[float]] = None
-    y_smooth: Optional[List[float]] = None
-
-    # Analysis results
-    peak_results: Optional[Dict[str, Any]] = None
-    integration_results: Optional[Dict[str, Any]] = None
-
-    # Technique-specific extras
-    extra: Dict[str, Any] = Field(default_factory=dict)
-
-
-class PipelineResult(BaseModel):
-    """Unified result object returned by the universal pipeline."""
-
-    processed_data: Union[ProcessedData, Dict[str, Any], None] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    qc: Dict[str, QCMetric] = Field(default_factory=dict)
-    plots: List[PlotConfig] = Field(default_factory=list)
-    errors: List[str] = Field(default_factory=list)
+    def summary(self) -> Dict[str, Any]:
+        return {
+            "technique": self.raw.technique.name,
+            "num_plots": len(self.plots),
+            "metadata": self.raw.metadata,
+        }
