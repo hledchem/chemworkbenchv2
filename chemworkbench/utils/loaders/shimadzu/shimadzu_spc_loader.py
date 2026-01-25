@@ -30,7 +30,9 @@ class ShimadzuSPCLoader(BaseVendorLoader):
     FORMAT = "spc"
     EXTENSIONS = (".spc",)
 
-    def sniff(self, path: Path) -> bool:
+    def sniff(self, path) -> bool:
+    path = Path(path)  # normalize input (string or Path)
+
         return path.suffix.lower() == ".spc"
 
     def load_raw(self, path: Path) -> Any:
