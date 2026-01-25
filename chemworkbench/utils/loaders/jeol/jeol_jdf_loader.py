@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping, Dict, List
 
+from chemworkbench.core.models import Technique
+
 from ..base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -75,7 +77,9 @@ class JEOLJDFLoader(BaseVendorLoader):
 
             return {"metadata": metadata, "spectrum": spectrum}
         except Exception as exc:
-            raise LoaderReadError(f"Failed to parse JEOL JDF file '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to parse JEOL JDF file '{path}': {exc}"
+            ) from exc
 
     # -----------------------------
     # Loader API
@@ -95,10 +99,12 @@ class JEOLJDFLoader(BaseVendorLoader):
                 "vendor": self.VENDOR,
                 "nucleus": nucleus,
                 "num_points": num_points,
-                "technique": "nmr",
+                "technique": Technique.NMR,
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract metadata from JEOL JDF: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract metadata from JEOL JDF: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
@@ -108,4 +114,6 @@ class JEOLJDFLoader(BaseVendorLoader):
                 "metadata": raw_data["metadata"],
             }
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize JEOL JDF data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize JEOL JDF data: {exc}"
+            ) from exc
