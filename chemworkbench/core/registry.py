@@ -132,7 +132,7 @@ class LoaderRegistry:
         self.register("waters_raw", WatersRAWLoader)
 
         # JEOL
-        self.register("jeol_jdf", JeolJDFLoader)
+        self.register("jeol_jdf", JEOLJDFLoader)
 
         # Varian
         self.register("varian_nmr", VarianNMRLoader)
