@@ -34,8 +34,8 @@ class CHIDTALoader(BaseVendorLoader):
     EXTENSIONS = (".dta",)
 
     def sniff(self, path) -> bool:
-    path = Path(path)  # normalize input (string or Path)
-    return path.suffix.lower() == ".dta"
+        path = Path(path)  # normalize input (string or Path)
+        return path.suffix.lower() == ".dta"
 
     def load_raw(self, path: Path) -> Any:
         try:
