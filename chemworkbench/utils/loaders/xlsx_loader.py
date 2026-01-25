@@ -57,20 +57,26 @@ class XLSXLoader(BaseVendorLoader):
             return data
 
         except Exception as exc:
-            raise LoaderReadError(f"Failed to read XLSX file '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to read XLSX file '{path}': {exc}"
+            ) from exc
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
             return {
-                "format": "xlsx",
+                "format": self.FORMAT,
                 "num_sheets": len(raw_data),
                 "sheets": list(raw_data.keys()),
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract XLSX metadata: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract XLSX metadata: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
             return raw_data
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize XLSX data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize XLSX data: {exc}"
+            ) from exc
