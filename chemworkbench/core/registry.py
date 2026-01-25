@@ -30,7 +30,7 @@ from chemworkbench.utils.loaders.agilent.agilent_d_uvvis_loader import AgilentDU
 from chemworkbench.utils.loaders.agilent.agilent_d_chrom_loader import AgilentDChromLoader
 from chemworkbench.utils.loaders.agilent.agilent_d_ms_loader import AgilentDMSLoader
 
-from chemworkbench.utils.loaders.bruker.bruker_opus_loader import BrukerOpusLoader
+from chemworkbench.utils.loaders.bruker.bruker_opus_loader import BrukerOPUSLoader
 from chemworkbench.utils.loaders.bruker.bruker_nmr_loader import BrukerNMRLoader
 from chemworkbench.utils.loaders.bruker.bruker_epr_loader import BrukerEPRLoader
 
