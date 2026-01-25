@@ -31,7 +31,7 @@ class PerkinElmerSPLoader(BaseVendorLoader):
     EXTENSIONS = (".sp",)
 
     def sniff(self, path) -> bool:
-    path = Path(path)  # normalize input (string or Path)
+        path = Path(path)  # normalize input (string or Path)
 
         return path.suffix.lower() == ".sp"
 
