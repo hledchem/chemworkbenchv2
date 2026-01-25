@@ -1,5 +1,5 @@
 import pytest
-from utils.loaders.loader_registry import iter_loaders
+from chemworkbench.utils.loaders.loader_registry import iter_loaders
 
 def test_loader_sniff_and_universal(tmp_path):
     # Create a synthetic CSV file
