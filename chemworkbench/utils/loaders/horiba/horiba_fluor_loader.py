@@ -35,8 +35,8 @@ class HoribaFluorescenceLoader(BaseVendorLoader):
     EXTENSIONS = (".txt", ".dat", ".csv")
 
     def sniff(self, path) -> bool:
-    path = Path(path)  # normalize input (string or Path)
-    return path.suffix.lower() in self.EXTENSIONS
+        path = Path(path)  # normalize input (string or Path)
+        return path.suffix.lower() in self.EXTENSIONS
 
     def load_raw(self, path: Path) -> Any:
         try:
