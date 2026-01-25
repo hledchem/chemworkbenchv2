@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping, Dict, List
 
+from chemworkbench.core.models import Technique
+
 from ..base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -93,7 +95,9 @@ class VarianNMRLoader(BaseVendorLoader):
                 "path": str(path),
             }
         except Exception as exc:
-            raise LoaderReadError(f"Failed to read Varian NMR directory '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to read Varian NMR directory '{path}': {exc}"
+            ) from exc
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
@@ -105,10 +109,12 @@ class VarianNMRLoader(BaseVendorLoader):
                 "vendor": self.VENDOR,
                 "nucleus": nucleus,
                 "num_fid_points": len(raw_data.get("fid", [])),
-                "technique": "nmr",
+                "technique": Technique.NMR,
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract metadata from Varian NMR: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract metadata from Varian NMR: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
@@ -121,4 +127,6 @@ class VarianNMRLoader(BaseVendorLoader):
                 },
             }
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize Varian NMR data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize Varian NMR data: {exc}"
+            ) from exc
