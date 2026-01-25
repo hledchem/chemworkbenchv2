@@ -120,4 +120,16 @@ class PipelineResult:
             "num_plots": len(self.plots),
             "metadata": self.raw.metadata,
         }
-        
+        # ------------------------------------------------------------
+# Base Processor Config (shared parent for all processors)
+# ------------------------------------------------------------
+
+@dataclass
+class BaseProcessorConfig:
+    """
+    Base class for all processor configuration objects.
+
+    Each technique-specific processor (UV-Vis, IR, Raman, etc.)
+    should define its own config class inheriting from this.
+    """
+    pass
