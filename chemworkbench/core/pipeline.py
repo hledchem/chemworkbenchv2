@@ -168,16 +168,13 @@ def run_pipeline(path: str | Path) -> PipelineResult:
 def run_pipeline(processor, config, data):
     """
     Compatibility helper for example tests.
-
-    Expected signature:
-        run_pipeline(processor, config, data)
-
-    This bypasses file sniffing and loaders, and directly runs:
-        processor.process(data, config)
-        processor.make_plots(...)
     """
 
-    # Run processor with explicit config (v2.1 API)
+    # Instantiate config if a class was passed
+    if isinstance(config, type):
+        config = config()
+
+    # Run processor with explicit config
     processed = processor.process(data, config)
 
     # Generate plots
