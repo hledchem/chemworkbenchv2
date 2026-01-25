@@ -28,8 +28,9 @@ class BrukerOPUSLoader(BaseVendorLoader):
     FORMAT = "opus"
     EXTENSIONS = (".0", ".1", ".2", ".x", ".X")
 
-    def sniff(self, path: Path) -> bool:
-        return path.suffix.lower() in {".0", ".1", ".2", ".x"}
+    def sniff(self, path) -> bool:
+    path = Path(path)  # normalize input (string or Path)
+    return path.suffix.lower() in {".0", ".1", ".2", ".x"}
 
     def load_raw(self, path: Path) -> Any:
         try:
