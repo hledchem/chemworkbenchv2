@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping
 
+from chemworkbench.core.models import Technique
+
 from ..base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -48,7 +50,9 @@ class ShimadzuIRXLoader(BaseVendorLoader):
 
             return {"x": x_vals, "y": y_vals, "path": str(path)}
         except Exception as exc:
-            raise LoaderReadError(f"Failed to read Shimadzu IRX file '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to read Shimadzu IRX file '{path}': {exc}"
+            ) from exc
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
@@ -56,10 +60,12 @@ class ShimadzuIRXLoader(BaseVendorLoader):
                 "format": self.FORMAT,
                 "vendor": self.VENDOR,
                 "num_points": len(raw_data["x"]),
-                "technique": "ir",
+                "technique": Technique.IR,
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract metadata from Shimadzu IRX: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract metadata from Shimadzu IRX: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
@@ -70,4 +76,6 @@ class ShimadzuIRXLoader(BaseVendorLoader):
                 "axis_units": {"x": "cm^-1", "y": "absorbance"},
             }
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize Shimadzu IRX data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize Shimadzu IRX data: {exc}"
+            ) from exc
