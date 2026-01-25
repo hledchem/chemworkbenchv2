@@ -29,7 +29,9 @@ class ShimadzuUVSLoader(BaseVendorLoader):
     FORMAT = "uvs"
     EXTENSIONS = (".uvs",)
 
-    def sniff(self, path: Path) -> bool:
+    def sniff(self, path) -> bool:
+    path = Path(path)  # normalize input (string or Path)
+
         return path.suffix.lower() == ".uvs"
 
     def load_raw(self, path: Path) -> Any:
