@@ -1,50 +1,147 @@
+"""
+core/pipeline.py
+
+Unified processing pipeline for ChemWorkBench v2.
+
+This orchestrates:
+    1. File sniffing
+    2. Loader resolution
+    3. Vendor loader execution
+    4. Technique routing
+    5. Processor execution
+    6. Plot generation
+    7. PipelineResult assembly
+
+This is the main entrypoint for all CLI, API, and UI workflows.
+"""
+
 from __future__ import annotations
-
 from pathlib import Path
+from typing import Optional
 
-from .registry import LoaderRegistry
-from .routing import TechniqueRouter
-from chemworkbench.services.processing_service import ProcessingService
+from chemworkbench.core.models import (
+    RawDataBundle,
+    ProcessedData,
+    PipelineResult,
+)
+from chemworkbench.core.models import DetectedFormat
+
+from chemworkbench.utils.file_sniffer.file_sniffer import sniff_file
+from chemworkbench.core.registry import loader_registry
+from chemworkbench.core.routing import technique_router
+
 from chemworkbench.services.plotting_service import PlottingService
+from chemworkbench.runtime.logging import get_logger
+from chemworkbench.runtime.errors import PipelineError
+
+
+logger = get_logger(__name__)
 
 
 class Pipeline:
     """
-    Full backend pipeline:
-    file → loader → universal → processor → plot
+    Main orchestrator for ChemWorkBench v2.
     """
 
     def __init__(self):
-        self.loader_registry = LoaderRegistry()
-        self.router = TechniqueRouter()
-        self.processor_service = ProcessingService()
         self.plotting_service = PlottingService()
 
-    def run(self, path: Path, config: dict | None = None):
-        # 1. Pick loader
-        loader = self.loader_registry.sniff_loader(path)
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
-        # 2. Load raw
-        raw = loader.load_raw(path)
+    def run(self, path: str | Path) -> PipelineResult:
+        """
+        Execute the full pipeline on a file path.
 
-        # 3. Extract metadata
-        metadata = loader.extract_metadata(raw)
+        Steps:
+            1. Sniff file → DetectedFormat
+            2. Resolve loader
+            3. Load raw data → RawDataBundle
+            4. Resolve processor
+            5. Process data → ProcessedData
+            6. Generate plots
+            7. Return PipelineResult
+        """
 
-        # 4. Normalize to universal model
-        universal = loader.to_universal(raw, metadata)
+        path = Path(path)
 
-        # 5. Route to processor
-        processor = self.router.route(metadata)
+        if not path.exists():
+            raise PipelineError(f"File not found: {path}")
 
-        # 6. Process
-        processed = self.processor_service.run(processor, universal, config)
+        logger.info(f"Starting pipeline for: {path}")
 
-        # 7. Plot
-        figure = self.plotting_service.run(processed)
+        # --------------------------------------------------------------
+        # 1. Sniff file
+        # --------------------------------------------------------------
+        fmt: DetectedFormat = sniff_file(str(path))
+        logger.debug(f"Detected format: {fmt}")
 
-        return {
-            "metadata": metadata,
-            "universal": universal,
-            "processed": processed,
-            "figure": figure,
-        }
+        # --------------------------------------------------------------
+        # 2. Resolve loader
+        # --------------------------------------------------------------
+        loader_cls = loader_registry.resolve_loader(fmt)
+        if loader_cls is None:
+            raise PipelineError(f"No loader found for detected format: {fmt}")
+
+        loader = loader_cls()
+        logger.info(f"Using loader: {loader_cls.__name__}")
+
+        # --------------------------------------------------------------
+        # 3. Load raw data
+        # --------------------------------------------------------------
+        try:
+            raw: RawDataBundle = loader.load(path)
+        except Exception as exc:
+            raise PipelineError(f"Loader failed: {exc}") from exc
+
+        logger.debug(f"Loaded raw data bundle: {raw}")
+
+        # --------------------------------------------------------------
+        # 4. Resolve processor
+        # --------------------------------------------------------------
+        processor_cls = technique_router.resolve_processor(raw.technique)
+        if processor_cls is None:
+            raise PipelineError(f"No processor available for technique: {raw.technique}")
+
+        processor = processor_cls()
+        logger.info(f"Using processor: {processor_cls.__name__}")
+
+        # --------------------------------------------------------------
+        # 5. Process data
+        # --------------------------------------------------------------
+        try:
+            processed: ProcessedData = processor.run(raw)
+        except Exception as exc:
+            raise PipelineError(f"Processor failed: {exc}") from exc
+
+        logger.debug(f"Processed data: {processed}")
+
+        # --------------------------------------------------------------
+        # 6. Generate plots
+        # --------------------------------------------------------------
+        try:
+            plots = self.plotting_service.render(processed.plots)
+        except Exception as exc:
+            raise PipelineError(f"Plotting failed: {exc}") from exc
+
+        logger.info(f"Generated {len(plots)} plots")
+
+        # --------------------------------------------------------------
+        # 7. Assemble result
+        # --------------------------------------------------------------
+        result = PipelineResult(
+            raw=raw,
+            processed=processed,
+            plots=processed.plots,
+        )
+
+        logger.info("Pipeline completed successfully")
+        return result
+
+
+# ----------------------------------------------------------------------
+# Singleton instance
+# ----------------------------------------------------------------------
+
+pipeline = Pipeline()
