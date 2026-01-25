@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping, Dict, List
 
+from chemworkbench.core.models import Technique
+
 from ..base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -39,7 +41,9 @@ class ShimadzuLCDLoader(BaseVendorLoader):
         try:
             files = self._find_data_files(path)
             if not files:
-                raise LoaderReadError(f"No data files found in Shimadzu LCD directory '{path}'")
+                raise LoaderReadError(
+                    f"No data files found in Shimadzu LCD directory '{path}'"
+                )
 
             datasets: Dict[str, Dict[str, Any]] = {}
 
@@ -61,8 +65,11 @@ class ShimadzuLCDLoader(BaseVendorLoader):
                 datasets[fpath.name] = {"x": x_vals, "y": y_vals}
 
             return {"datasets": datasets, "directory": str(path)}
+
         except Exception as exc:
-            raise LoaderReadError(f"Failed to read Shimadzu LCD directory '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to read Shimadzu LCD directory '{path}': {exc}"
+            ) from exc
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
@@ -72,10 +79,12 @@ class ShimadzuLCDLoader(BaseVendorLoader):
                 "vendor": self.VENDOR,
                 "num_datasets": len(datasets),
                 "dataset_names": list(datasets.keys()),
-                "technique": "chrom",  # LCD is primarily chromatography
+                "technique": Technique.CHROM,  # LCD is primarily chromatography
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract metadata from Shimadzu LCD: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract metadata from Shimadzu LCD: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
@@ -85,4 +94,6 @@ class ShimadzuLCDLoader(BaseVendorLoader):
                 "axis_units": {"x": "min", "y": "intensity"},
             }
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize Shimadzu LCD data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize Shimadzu LCD data: {exc}"
+            ) from exc
