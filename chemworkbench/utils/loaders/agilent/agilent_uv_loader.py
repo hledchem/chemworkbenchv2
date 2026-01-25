@@ -27,8 +27,8 @@ class AgilentUVLoader(BaseVendorLoader):
     EXTENSIONS = (".uv", ".csv", ".txt")
 
     def sniff(self, path) -> bool:
-    path = Path(path)  # normalize input (string or Path)
-    return path.suffix.lower() in {".uv", ".csv", ".txt"}
+        path = Path(path)  # normalize input (string or Path)
+        return path.suffix.lower() in {".uv", ".csv", ".txt"}
 
 
     def load_raw(self, path: Path) -> Any:
