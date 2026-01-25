@@ -33,11 +33,14 @@ class BrukerNMRLoader(BaseVendorLoader):
     FORMAT = "nmr"
     EXTENSIONS = (".fid", "")  # directories have no suffix
 
-    def sniff(self, path: Path) -> bool:
-        # Bruker NMR datasets are directories containing 'fid' and 'acqus'
-        if not path.is_dir():
-            return False
-        return (path / "fid").exists() and (path / "acqus").exists()
+   def sniff(self, path) -> bool:
+    path = Path(path)  # normalize input (string or Path)
+
+    # Bruker NMR datasets are directories containing 'fid' and 'acqus'
+    if not path.is_dir():
+        return False
+
+    return (path / "fid").exists() and (path / "acqus").exists()
 
     # -----------------------------
     # Helpers
