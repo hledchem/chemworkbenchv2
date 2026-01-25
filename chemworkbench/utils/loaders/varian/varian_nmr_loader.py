@@ -35,13 +35,13 @@ class VarianNMRLoader(BaseVendorLoader):
     EXTENSIONS = ("",)  # directories have no suffix
 
     def sniff(self, path) -> bool:
-    path = Path(path)  # normalize input (string or Path)
+        path = Path(path)  # normalize input (string or Path)
 
     # Varian datasets are directories containing 'fid' and 'procpar'
-    if not path.is_dir():
-        return False
+        if not path.is_dir():
+            return False
 
-    return (path / "fid").exists() and (path / "procpar").exists()
+        return (path / "fid").exists() and (path / "procpar").exists()
     # -----------------------------
     # Helpers
     # -----------------------------
