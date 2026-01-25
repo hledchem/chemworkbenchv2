@@ -29,7 +29,9 @@ class ShimadzuIRXLoader(BaseVendorLoader):
     FORMAT = "irx"
     EXTENSIONS = (".irx",)
 
-    def sniff(self, path: Path) -> bool:
+    def sniff(self, path) -> bool:
+    path = Path(path)  # normalize input (string or Path)
+
         return path.suffix.lower() == ".irx"
 
     def load_raw(self, path: Path) -> Any:
