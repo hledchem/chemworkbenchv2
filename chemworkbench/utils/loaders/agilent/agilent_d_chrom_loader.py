@@ -1,5 +1,3 @@
-# utils/loaders/agilent/agilent_d_chrom_loader.py
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -19,7 +17,7 @@ class AgilentDChromLoader(BaseVendorLoader):
     """
     Agilent .D directory loader for chromatography data (HPLC/GC/LC-MS chromatograms).
 
-    This scaffold implementation looks for a chromatogram-like CSV inside the .D
+    This implementation looks for chromatogram-like CSV files inside the .D
     directory and parses time vs intensity.
     """
 
@@ -27,14 +25,27 @@ class AgilentDChromLoader(BaseVendorLoader):
     FORMAT = "d_chrom"
     EXTENSIONS = (".d",)
 
-
     def sniff(self, path) -> bool:
         """
-        Agilent .D directory sniffer.
-        Accepts either a string or a Path.
+        Sniff an Agilent .D chromatography directory.
+
+        Requirements:
+        - Must be a directory ending in .D
+        - Must contain CHROM*.CSV or *.CHROM.CSV or fallback CSVs
         """
-        path = Path(path)  # normalize input
-        return path.is_dir() and path.suffix.lower() == ".d"
+        path = Path(path)
+
+        if not (path.is_dir() and path.suffix.lower() == ".d"):
+            return False
+
+        # Content-based sniffing to avoid collisions with other Agilent .D loaders
+        chrom_files = (
+            list(path.glob("CHROM*.CSV"))
+            + list(path.glob("*.CHROM.CSV"))
+            + list(path.glob("*.csv"))
+        )
+
+        return len(chrom_files) > 0
 
     def _find_chrom_files(self, path: Path) -> List[Path]:
         # Heuristic: look for CHROM*.CSV or similar
@@ -46,6 +57,8 @@ class AgilentDChromLoader(BaseVendorLoader):
 
     def load_raw(self, path: Path) -> Any:
         try:
+            path = Path(path)
+
             chrom_files = self._find_chrom_files(path)
             if not chrom_files:
                 raise LoaderReadError(
@@ -104,7 +117,6 @@ class AgilentDChromLoader(BaseVendorLoader):
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
-            # Universal representation: dict of chromatograms
             return {
                 "chromatograms": raw_data["chromatograms"],
                 "kind": "chromatogram_set",
