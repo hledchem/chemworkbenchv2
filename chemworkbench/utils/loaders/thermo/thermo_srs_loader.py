@@ -30,7 +30,9 @@ class ThermoSRSLoader(BaseVendorLoader):
     FORMAT = "srs"
     EXTENSIONS = (".srs",)
 
-    def sniff(self, path: Path) -> bool:
+    def sniff(self, path) -> bool:
+    path = Path(path)  # normalize input (string or Path)
+
         return path.suffix.lower() == ".srs"
 
     def load_raw(self, path: Path) -> Any:
