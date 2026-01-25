@@ -33,7 +33,7 @@ class ThermoSPALoader(BaseVendorLoader):
     EXTENSIONS = (".spa",)
 
     def sniff(self, path) -> bool:
-    path = Path(path)  # normalize input (string or Path)
+        path = Path(path)  # normalize input (string or Path)
 
         return path.suffix.lower() == ".spa"
 
