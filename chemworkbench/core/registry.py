@@ -21,7 +21,7 @@ from chemworkbench.core.models import DetectedFormat, Technique
 # Universal loaders
 from chemworkbench.utils.loaders.csv_loader import CSVLoader
 from chemworkbench.utils.loaders.xlsx_loader import XLSXLoader
-from chemworkbench.utils.loaders.jcamp_loader import JCAMPDXLoader
+from chemworkbench.utils.loaders.jcamp_loader import JCAMPLoader
 
 # Vendor loaders
 from chemworkbench.utils.loaders.agilent.agilent_uv_loader import AgilentUVLoader
