@@ -161,6 +161,10 @@ def run_pipeline(path: str | Path) -> PipelineResult:
 # Test-only helper for example scripts
 # ----------------------------------------------------------------------
 
+# ----------------------------------------------------------------------
+# Test-only helper for example scripts
+# ----------------------------------------------------------------------
+
 def run_pipeline(processor, config, data):
     """
     Compatibility helper for example tests.
@@ -169,11 +173,12 @@ def run_pipeline(processor, config, data):
         run_pipeline(processor, config, data)
 
     This bypasses file sniffing and loaders, and directly runs:
-        processor.process(data)
+        processor.process(data, config)
         processor.make_plots(...)
     """
-    # Run processor (v2.1 API)
-    processed = processor.process(data)
+
+    # Run processor with explicit config (v2.1 API)
+    processed = processor.process(data, config)
 
     # Generate plots
     plots = processor.make_plots(processed)
