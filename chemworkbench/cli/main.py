@@ -1,28 +1,24 @@
 """
-cli/main.py
+chemworkbench.cli.main
 
-Command-line interface for ChemWorkBench v2.
+Primary command-line interface for ChemWorkBench v2.
 
-This CLI provides:
-    - Full pipeline execution on a file
-    - Processing-only mode
-    - Plot-only mode (from saved PlotConfig JSON)
-    - Debug logging toggle
+Supports:
+    chemwb run <file>
+    chemwb process <file>
+    chemwb plot <plot_config.json>
 
-Usage examples:
-    chemwb run file.spc
-    chemwb process file.spc
-    chemwb plot plot_config.json
+This CLI is designed to work cleanly in PowerShell, CMD, Bash, and zsh.
 """
 
 from __future__ import annotations
 import argparse
-from pathlib import Path
 import json
+from pathlib import Path
 
-from chemworkbench.core.pipeline import pipeline
 from chemworkbench.api.run_processing import run_processing_from_file
 from chemworkbench.api.run_plotting import run_plotting
+from chemworkbench.core.pipeline import pipeline
 from chemworkbench.core.models import PlotConfig
 from chemworkbench.runtime.logging import enable_debug_logging, get_logger
 from chemworkbench.runtime.errors import PipelineError
@@ -32,7 +28,7 @@ logger = get_logger(__name__)
 
 
 # ----------------------------------------------------------------------
-# CLI Commands
+# Command implementations
 # ----------------------------------------------------------------------
 
 def cmd_run(args):
@@ -69,7 +65,7 @@ def cmd_plot(args):
 
 
 # ----------------------------------------------------------------------
-# CLI Entrypoint
+# CLI entrypoint
 # ----------------------------------------------------------------------
 
 def main():
