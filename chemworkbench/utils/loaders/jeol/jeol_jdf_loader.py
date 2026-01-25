@@ -35,8 +35,8 @@ class JEOLJDFLoader(BaseVendorLoader):
     EXTENSIONS = (".jdf",)
 
     def sniff(self, path) -> bool:
-    path = Path(path)  # normalize input (string or Path)
-    return path.suffix.lower() == ".jdf"
+        path = Path(path)  # normalize input (string or Path)
+        return path.suffix.lower() == ".jdf"
 
     # -----------------------------
     # Helpers
