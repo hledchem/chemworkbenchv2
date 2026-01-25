@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping
 
+from chemworkbench.core.models import Technique
+
 from ..base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -48,7 +50,9 @@ class AgilentUVLoader(BaseVendorLoader):
 
             return {"x": x_vals, "y": y_vals}
         except Exception as exc:
-            raise LoaderReadError(f"Failed to read Agilent UV file '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to read Agilent UV file '{path}': {exc}"
+            ) from exc
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
@@ -56,10 +60,12 @@ class AgilentUVLoader(BaseVendorLoader):
                 "format": self.FORMAT,
                 "vendor": self.VENDOR,
                 "num_points": len(raw_data.get("x", [])),
-                "technique": "uvvis",
+                "technique": Technique.UVVIS,
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract metadata from Agilent UV file: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract metadata from Agilent UV file: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
@@ -70,4 +76,6 @@ class AgilentUVLoader(BaseVendorLoader):
                 "axis_units": {"x": "nm", "y": "absorbance"},
             }
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize Agilent UV data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize Agilent UV data: {exc}"
+            ) from exc
