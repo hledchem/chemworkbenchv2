@@ -156,3 +156,30 @@ def run_pipeline(path: str | Path) -> PipelineResult:
     with tests and external callers expecting a module-level function.
     """
     return pipeline.run(path)
+
+# ----------------------------------------------------------------------
+# Test-only helper for example scripts
+# ----------------------------------------------------------------------
+
+def run_pipeline(processor, config, data):
+    """
+    Compatibility helper for example tests.
+
+    Expected signature:
+        run_pipeline(processor, config, data)
+
+    This bypasses file sniffing and loaders, and directly runs:
+        processor.run(data)
+        processor.make_plots(...)
+    """
+    # Run processor
+    processed = processor.run(data)
+
+    # Generate plots
+    plots = processor.make_plots(processed)
+
+    return PipelineResult(
+        raw=data,
+        processed=processed,
+        plots=plots,
+    )
