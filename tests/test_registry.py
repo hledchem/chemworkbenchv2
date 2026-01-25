@@ -1,6 +1,6 @@
 import pytest
-from utils.loaders.loader_registry import LOADER_REGISTRY, iter_loaders
-from utils.loaders.base_loader import BaseVendorLoader
+from chemworkbench.utils.loaders.loader_registry import LOADER_REGISTRY, iter_loaders
+from chemworkbench.utils.loaders.base_loader import BaseVendorLoader
 
 def test_registry_keys_are_lowercase():
     for (vendor, fmt) in LOADER_REGISTRY.keys():
