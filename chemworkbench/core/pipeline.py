@@ -169,11 +169,11 @@ def run_pipeline(processor, config, data):
         run_pipeline(processor, config, data)
 
     This bypasses file sniffing and loaders, and directly runs:
-        processor.run(data)
+        processor.process(data)
         processor.make_plots(...)
     """
-    # Run processor
-    processed = processor.run(data)
+    # Run processor (v2.1 API)
+    processed = processor.process(data)
 
     # Generate plots
     plots = processor.make_plots(processed)
