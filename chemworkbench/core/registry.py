@@ -165,12 +165,12 @@ class LoaderRegistry:
 
         # 2. Try vendor + technique
         if fmt.vendor:
-            key = f"{fmt.vendor.lower()}_{fmt.technique.name.lower()}"
+            key = f"{fmt.vendor.lower()}_{fmt.technique.value}"
             if key in self._registry:
                 return self._registry[key]
 
         # 3. Try technique-only loaders
-        key = fmt.technique.name.lower()
+        key = fmt.technique.value
         if key in self._registry:
             return self._registry[key]
 
