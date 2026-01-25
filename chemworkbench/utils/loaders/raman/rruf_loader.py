@@ -29,16 +29,19 @@ class RRUFFLoader(BaseVendorLoader):
     FORMAT = "rruf"
     EXTENSIONS = (".txt", ".rruf")
 
-    def sniff(self, path: Path) -> bool:
-        # RRUFF files are usually .txt but contain specific header lines
-        if path.suffix.lower() not in {".txt", ".rruf"}:
-            return False
-        try:
-            with path.open("r", encoding="utf-8", errors="ignore") as f:
-                first_line = f.readline().lower()
-                return "rruff" in first_line or "raman" in first_line
-        except Exception:
-            return False
+    def sniff(self, path) -> bool:
+    path = Path(path)  # normalize input (string or Path)
+
+    # RRUFF files are usually .txt but contain specific header lines
+    if path.suffix.lower() not in {".txt", ".rruf"}:
+        return False
+
+    try:
+        with path.open("r", encoding="utf-8", errors="ignore") as f:
+            first_line = f.readline().lower()
+            return "rruff" in first_line or "raman" in first_line
+    except Exception:
+        return False
 
     def load_raw(self, path: Path) -> Any:
         try:
