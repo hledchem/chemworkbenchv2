@@ -27,8 +27,14 @@ class AgilentDChromLoader(BaseVendorLoader):
     FORMAT = "d_chrom"
     EXTENSIONS = (".d",)
 
-    def sniff(self, path: Path) -> bool:
-        return path.is_dir() and path.suffix.lower() == ".d"
+
+def sniff(self, path) -> bool:
+    """
+    Agilent .D directory sniffer.
+    Accepts either a string or a Path.
+    """
+    path = Path(path)  # normalize input
+    return path.is_dir() and path.suffix.lower() == ".d"
 
     def _find_chrom_files(self, path: Path) -> List[Path]:
         # Heuristic: look for CHROM*.CSV or similar
