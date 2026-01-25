@@ -30,13 +30,13 @@ class AgilentDMSLoader(BaseVendorLoader):
 
 
 
-def sniff(self, path) -> bool:
-    """
-    Agilent .D directory sniffer.
-    Accepts either a string or a Path.
-    """
-    path = Path(path)  # normalize input
-    return path.is_dir() and path.suffix.lower() == ".d"
+    def sniff(self, path) -> bool:
+        """
+        Agilent .D directory sniffer.
+        Accepts either a string or a Path.
+        """
+        path = Path(path)  # normalize input
+        return path.is_dir() and path.suffix.lower() == ".d"
 
     def _find_ms_files(self, path: Path) -> List[Path]:
         # Heuristic: look for MS*.CSV or similar
