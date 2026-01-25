@@ -67,20 +67,24 @@ class JCAMPLoader(BaseVendorLoader):
             }
 
         except Exception as exc:
-            raise LoaderReadError(f"Failed to read JCAMP file '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to read JCAMP file '{path}': {exc}"
+            ) from exc
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
             md = raw_data.get("metadata", {})
             return {
-                "format": "jcamp",
+                "format": self.FORMAT,
                 "title": md.get("title"),
                 "owner": md.get("owner"),
                 "origin": md.get("origin"),
                 "num_points": len(raw_data.get("x", [])),
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract JCAMP metadata: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract JCAMP metadata: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
@@ -90,4 +94,6 @@ class JCAMPLoader(BaseVendorLoader):
                 "metadata": raw_data["metadata"],
             }
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize JCAMP data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize JCAMP data: {exc}"
+            ) from exc
