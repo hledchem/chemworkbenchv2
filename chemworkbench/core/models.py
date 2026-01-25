@@ -14,26 +14,26 @@ These models define the contract between:
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 
 # ------------------------------------------------------------
-# Technique Enumeration
+# Technique Enumeration (canonical, frozen)
 # ------------------------------------------------------------
 
-class Technique(Enum):
-    UVVIS = auto()
-    FLUORESCENCE = auto()
-    IR = auto()
-    RAMAN = auto()
-    NMR = auto()
-    EPR = auto()
-    CV = auto()
-    GCMS = auto()
-    LCMS = auto()
-    CHROMATOGRAPHY = auto()
-    UNKNOWN = auto()
+class Technique(str, Enum):
+    UVVIS = "uvvis"
+    FLUORESCENCE = "fluorescence"
+    IR = "ir"
+    RAMAN = "raman"
+    NMR = "nmr"
+    EPR = "epr"
+    CV = "cv"
+    GCMS = "gcms"
+    LCMS = "lcms"
+    CHROMATOGRAPHY = "chromatography"
+    UNKNOWN = "unknown"
 
 
 # ------------------------------------------------------------
@@ -76,9 +76,13 @@ class RawDataBundle:
 @dataclass
 class ProcessedData:
     technique: Technique
-    processed: Any                 # normalized, cleaned, structured data
+    raw_data: Any = None                          # optional: processors may attach raw reference
+    processed_data: Any = None                    # normalized, cleaned, structured data
     metadata: Dict[str, Any] = field(default_factory=dict)
+    qc: Dict[str, Any] = field(default_factory=dict)
     plots: List["PlotConfig"] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
 
 
 # ------------------------------------------------------------
@@ -112,7 +116,8 @@ class PipelineResult:
 
     def summary(self) -> Dict[str, Any]:
         return {
-            "technique": self.raw.technique.name,
+            "technique": self.raw.technique.value,   # canonical lower_snake_case
             "num_plots": len(self.plots),
             "metadata": self.raw.metadata,
         }
+        
