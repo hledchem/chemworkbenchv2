@@ -1,9 +1,4 @@
-Absolutely, Hayden — here is the clean, corrected, unified, final v2.1 Naming Convention, incorporating every fix we discussed:
-- uv_vis → uvvis everywhere
-- clarified processor hooks vs pipeline steps
-- added rule for plot layer type names
-- added rule for technique config section names
-- tightened language for consistency
+
 This is now the authoritative, frozen naming specification for ChemWorkBench v2.
 
 🧱 ChemWorkBench v2 — Naming Conventions (v2.1, Final & Frozen)
