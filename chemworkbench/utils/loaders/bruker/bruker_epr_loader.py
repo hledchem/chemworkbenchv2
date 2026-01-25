@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping, Dict, List
 
+from chemworkbench.core.models import Technique
+
 from ..base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -67,7 +69,9 @@ class BrukerEPRLoader(BaseVendorLoader):
                 return self._load_esp(path)
             return self._load_dta_dsc(path)
         except Exception as exc:
-            raise LoaderReadError(f"Failed to read Bruker EPR file '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to read Bruker EPR file '{path}': {exc}"
+            ) from exc
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
@@ -75,10 +79,12 @@ class BrukerEPRLoader(BaseVendorLoader):
                 "vendor": self.VENDOR,
                 "format": self.FORMAT,
                 "num_points": len(raw_data.get("x", [])),
-                "technique": "epr",
+                "technique": Technique.EPR,
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract metadata from Bruker EPR: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract metadata from Bruker EPR: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
@@ -90,4 +96,6 @@ class BrukerEPRLoader(BaseVendorLoader):
                 "metadata": raw_data.get("metadata", {}),
             }
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize Bruker EPR data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize Bruker EPR data: {exc}"
+            ) from exc
