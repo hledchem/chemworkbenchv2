@@ -28,7 +28,9 @@ class RRUFFGZLoader(BaseVendorLoader):
     FORMAT = "rruf_gz"
     EXTENSIONS = (".gz",)
 
-    def sniff(self, path: Path) -> bool:
+    def sniff(self, path) -> bool:
+    path = Path(path)  # normalize input (string or Path)
+
         return path.suffix.lower() == ".gz"
 
     def load_raw(self, path: Path) -> Any:
