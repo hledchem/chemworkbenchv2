@@ -13,7 +13,7 @@ Output: DetectedFormat(vendor, technique, subtype, confidence)
 
 from __future__ import annotations
 import os
-from typing import Optional, List
+from typing import List
 
 from chemworkbench.core.models import Technique, DetectedFormat
 
@@ -81,7 +81,7 @@ def sniff_file(path: str) -> DetectedFormat:
         candidates.append(magic_candidate)
 
     # --------------------------------------------------------
-    # Tier 2: Technique inference (UV-Vis, IR, Raman, etc.)
+    # Tier 2: Technique inference (UVVis, IR, Raman, etc.)
     # --------------------------------------------------------
     technique_candidate = infer_technique_from_data(path)
     if technique_candidate:
