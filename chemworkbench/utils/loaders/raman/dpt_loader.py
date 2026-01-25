@@ -29,7 +29,9 @@ class DPTLoader(BaseVendorLoader):
     FORMAT = "dpt"
     EXTENSIONS = (".dpt",)
 
-    def sniff(self, path: Path) -> bool:
+    def sniff(self, path) -> bool:
+    path = Path(path)  # normalize input (string or Path)
+
         return path.suffix.lower() == ".dpt"
 
     def load_raw(self, path: Path) -> Any:
