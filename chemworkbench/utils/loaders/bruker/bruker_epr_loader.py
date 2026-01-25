@@ -30,8 +30,9 @@ class BrukerEPRLoader(BaseVendorLoader):
     FORMAT = "epr"
     EXTENSIONS = (".esp", ".dta")
 
-    def sniff(self, path: Path) -> bool:
-        return path.suffix.lower() in {".esp", ".dta"}
+    def sniff(self, path) -> bool:
+    path = Path(path)  # normalize input (string or Path)
+    return path.suffix.lower() in {".esp", ".dta"}
 
     def _load_esp(self, path: Path) -> Dict[str, Any]:
         x_vals, y_vals = [], []
