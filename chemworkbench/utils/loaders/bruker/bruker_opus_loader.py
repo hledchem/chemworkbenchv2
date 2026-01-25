@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping
 
+from chemworkbench.core.models import Technique
+
 from ..base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -40,7 +42,9 @@ class BrukerOPUSLoader(BaseVendorLoader):
                 "path": str(path),
             }
         except Exception as exc:
-            raise LoaderReadError(f"Failed to read Bruker OPUS file '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to read Bruker OPUS file '{path}': {exc}"
+            ) from exc
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
@@ -48,10 +52,12 @@ class BrukerOPUSLoader(BaseVendorLoader):
                 "format": self.FORMAT,
                 "vendor": self.VENDOR,
                 "path": raw_data.get("path"),
-                "technique": "ir",  # OPUS is most commonly IR/FTIR
+                "technique": Technique.IR,  # OPUS is most commonly IR/FTIR
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract metadata from OPUS file: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract metadata from OPUS file: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
@@ -63,4 +69,6 @@ class BrukerOPUSLoader(BaseVendorLoader):
                 "note": "OPUS parsing not implemented in v2",
             }
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize OPUS data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize OPUS data: {exc}"
+            ) from exc
