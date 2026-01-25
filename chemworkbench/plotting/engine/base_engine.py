@@ -1,25 +1,48 @@
+"""
+chemworkbench/plotting/engine/base_engine.py
+
+Base plotting engine for ChemWorkBench v2.
+
+This abstract class defines the interface that all concrete plotting
+engines (e.g., MatplotlibEngine) must implement.
+"""
+
 from __future__ import annotations
+from abc import ABC, abstractmethod
+from typing import Any
 
-from typing import List
-
-from chemworkbench.core.models import PlotConfig, PlotBackend
-from chemworkbench.plotting.engine.matplotlib_engine import MatplotlibEngine
+from chemworkbench.core.models import PlotConfig
 
 
-class PlotEngine:
-    """Universal entry point for rendering PlotConfig objects."""
+class BaseEngine(ABC):
+    """
+    Abstract base class for all plotting engines.
 
-    @staticmethod
-    def render(plot: PlotConfig):
-        if plot.backend == PlotBackend.NONE:
-            return None
-
-        if plot.backend == PlotBackend.MATPLOTLIB:
-            return MatplotlibEngine.render(plot)
-
-        raise ValueError(f"Unsupported backend: {plot.backend}")
+    Concrete engines must implement `render(plot_config)`.
+    """
 
     @staticmethod
-    def render_all(plots: List[PlotConfig]):
-        """Render a list of plots (a dashboard)."""
-        return [PlotEngine.render(p) for p in plots]
+    @abstractmethod
+    def render(plot: PlotConfig) -> Any:
+        """
+        Render a single PlotConfig object.
+
+        Concrete engines should return any representation they choose:
+        - a matplotlib Figure
+        - a dict
+        - a serialized object
+        - or None (for headless/test mode)
+
+        The pipeline and tests only require that this method exists.
+        """
+        raise NotImplementedError("Plotting engine must implement render().")
+
+    @staticmethod
+    def render_all(plots: list[PlotConfig]) -> list[Any]:
+        """
+        Render a list of PlotConfig objects.
+
+        Default implementation simply calls render() on each plot.
+        Engines may override this if they support dashboards.
+        """
+        return [BaseEngine.render(p) for p in plots]
