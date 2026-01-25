@@ -48,7 +48,7 @@ from chemworkbench.utils.loaders.perkinelmer.perkinelmer_spc_loader import Perki
 
 from chemworkbench.utils.loaders.waters.waters_raw_loader import WatersRAWLoader
 
-from chemworkbench.utils.loaders.jeol.jeol_jdf_loader import JeolJDFLoader
+from chemworkbench.utils.loaders.jeol.jeol_jdf_loader import JEOLJDFLoader
 from chemworkbench.utils.loaders.varian.varian_nmr_loader import VarianNMRLoader
 
 # Raman loaders
