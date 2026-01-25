@@ -6,12 +6,8 @@ import numpy as np
 
 from chemworkbench.core.models import (
     BaseProcessorConfig,
-    PlotBackend,
     PlotConfig,
-    PlotLayerConfig,
-    QCMetric,
     Technique,
-    PlotType,
 )
 from chemworkbench.utils.math_spectral import (
     baseline,
