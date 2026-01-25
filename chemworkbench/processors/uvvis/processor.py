@@ -75,16 +75,10 @@ class UVVisProcessor:
         x_arr = np.asarray(data["x"], dtype=float)
         y_arr = np.asarray(data["y"], dtype=float)
 
-        # -----------------------------------------------------------------
-        # Backward compatibility shim for old peak detection method names
-        # -----------------------------------------------------------------
-        method = config.peak_method.lower()
-        if method == "height":          # old v1 method name
-            method = "local_maxima"     # new v2.1 method name
-
         # Peak detection
         peak_results_dict: Optional[Dict[str, Any]] = None
         if config.detect_peaks:
+            method = config.peak_method.lower()
             peaks_result = detect_peaks(
                 x_arr,
                 y_arr,
@@ -208,7 +202,7 @@ class UVVisProcessor:
             "n_points": int(x_arr.size),
             "x_min": float(x_arr.min()) if x_arr.size > 0 else None,
             "x_max": float(x_arr.max()) if x_arr.size > 0 else None,
-            "config": config.model_dump(),
+            "config": config.model_dump() if hasattr(config, "model_dump") else dict(config),
         }
 
         integration = data.get("integration_results") if isinstance(data, dict) else None
@@ -250,12 +244,17 @@ class UVVisProcessor:
         raise TypeError("Data must contain 'x' and 'y' arrays.")
 
     def _peak_result_to_dict(self, peaks_result: Any) -> Dict[str, Any]:
+        """
+        Convert PeakDetectionResult into a simple dict for downstream use.
+        This is v2.1-native: we just expose whatever attributes the result has.
+        """
         if peaks_result is None:
             return {}
-        return {
-            "indices": peaks_result.indices.tolist(),
-            "positions": peaks_result.positions.tolist(),
-            "heights": peaks_result.heights.tolist(),
-            "prominences": peaks_result.prominences.tolist(),
-            "widths": peaks_result.widths.tolist(),
-        }
+
+        out: Dict[str, Any] = {}
+        for attr in ("indices", "x", "y", "prominence", "width", "refined_x", "refined_y"):
+            if hasattr(peaks_result, attr):
+                value = getattr(peaks_result, attr)
+                out[attr] = value.tolist() if hasattr(value, "tolist") else value
+
+        return out
