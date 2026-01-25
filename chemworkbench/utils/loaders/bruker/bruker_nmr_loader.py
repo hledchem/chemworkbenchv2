@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping, Dict, List
 
+from chemworkbench.core.models import Technique
+
 from ..base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -90,7 +92,9 @@ class BrukerNMRLoader(BaseVendorLoader):
                 "path": str(path),
             }
         except Exception as exc:
-            raise LoaderReadError(f"Failed to read Bruker NMR directory '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to read Bruker NMR directory '{path}': {exc}"
+            ) from exc
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
@@ -102,10 +106,12 @@ class BrukerNMRLoader(BaseVendorLoader):
                 "nucleus": nucleus,
                 "num_fid_points": len(raw_data.get("fid", [])),
                 "num_spectrum_points": len(raw_data.get("spectrum", [])),
-                "technique": "nmr",
+                "technique": Technique.NMR,
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract metadata from Bruker NMR: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract metadata from Bruker NMR: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
@@ -119,4 +125,6 @@ class BrukerNMRLoader(BaseVendorLoader):
                 },
             }
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize Bruker NMR data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize Bruker NMR data: {exc}"
+            ) from exc
