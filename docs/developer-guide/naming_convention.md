@@ -1,99 +1,105 @@
+Absolutely, Hayden — here is the clean, corrected, unified, final v2.1 Naming Convention, incorporating every fix we discussed:
+- uv_vis → uvvis everywhere
+- clarified processor hooks vs pipeline steps
+- added rule for plot layer type names
+- added rule for technique config section names
+- tightened language for consistency
+This is now the authoritative, frozen naming specification for ChemWorkBench v2.
 
+🧱 ChemWorkBench v2 — Naming Conventions (v2.1, Final & Frozen)
+Version: 2.1
+Status: Frozen
+Scope: Entire codebase (core, processors, loaders, plotting, services, runtime, plugins, configs, tests, docs)
+This document defines the canonical naming rules for ChemWorkBench v2.
+All future development must follow this specification.
 
-# ChemWorkBench v2 — Naming Conventions (Final, Authoritative Specification)
-
-**Version:** 2.0  
-**Status:** Frozen  
-**Scope:** All code, configs, processors, math utilities, pipeline hooks, models, plotting, services, plugins, runtime, and documentation.
-
-These conventions ensure:
-- architectural consistency  
-- LLM‑friendly naming  
-- extensibility  
-- UI‑friendliness  
-- zero naming drift  
-
----
-
-# 1. File & Folder Naming
-
-## 1.1 General Rules
-- All filenames use **snake_case**.
-- All folders use **snake_case**.
+1. File & Folder Naming
+1.1 General Rules
+- All filenames use snake_case.
+- All folders use snake_case.
 - Names must be descriptive and avoid unnecessary abbreviations.
+Examples
+math_spectral.py
+pipeline.py
+models.py
+processor.py
+plotting_engine.py
+uvvis_processor.py
 
-### Examples
 
-
-math_spectral.py pipeline.py models.py processor.py plotting_engine.py uvvis_processor.py
 
----
-
-## 1.2 Math Modules
+1.2 Math Modules
 Pattern:
-
-
 math_<domain>.py
 
+
 Examples:
+math_spectral.py
+math_baseline.py
+math_peaks.py
+math_smoothing.py
+math_normalization.py
 
 
-math_spectral.py math_baseline.py math_peaks.py math_smoothing.py math_normalization.py
+This pattern is frozen.
 
-This pattern is **frozen**.
-
----
-
-## 1.3 Processor Modules
+1.3 Processor Modules
 Processors live in:
+processors/<technique>/processor.py
+processors/<technique>/config.py
 
-
-processors/<technique>/processor.py processors/<technique>/config.py
 
 Examples:
+processors/uvvis/processor.py
+processors/uvvis/config.py
 
 
-processors/uvvis/processor.py processors/uvvis/config.py
 
----
-
-# 2. Class Naming
-
-## 2.1 Rules
-- All classes use **PascalCase**.
+2. Class Naming
+2.1 Rules
+- Classes use PascalCase.
 - Class names must be nouns.
-- Structured return objects must end with **Result**.
-- Schema classes must end with **Schema**.
-- Builder classes must end with **Builder**.
-- Service classes must end with **Service**.
+- Return objects end with Result.
+- Schema classes end with Schema.
+- Builder classes end with Builder.
+- Service classes end with Service.
+2.2 Canonical Examples
+Technique
+PlotBackend
+PlotType
+PlotLayerConfig
+PlotConfig
+QCMetric
+ProcessedData
+BaseProcessorConfig
+PeakDetectionResult
+FigureSchema
+PanelSchema
+TraceSchema
+AnnotationSchema
+PlotConfigBuilder
+PlottingService
+RuntimeEnvironment
 
-## 2.2 Canonical Examples
 
 
-Technique PlotBackend PlotType PlotLayerConfig PlotConfig QCMetric ProcessedData BaseProcessorConfig PeakDetectionResult FigureSchema PanelSchema TraceSchema AnnotationSchema PlotConfigBuilder PlottingService RuntimeEnvironment
-
----
-
-# 3. Enum Naming
-
-## 3.1 Rules
-- Enum classes use **PascalCase**.
-- Enum members use **UPPER_SNAKE_CASE**.
-- Enum values use **lower_snake_case**.
-
-### Example
-``python
+3. Enum Naming
+3.1 Rules
+- Enum classes: PascalCase
+- Enum members: UPPER_SNAKE_CASE
+- Enum values: lower_snake_case
+Example
 class Technique(str, Enum):
-    UV_VIS = "uv_vis"
+    UVVIS = "uvvis"
     NMR = "nmr"
 
 
 
 4. Function Naming
 4.1 Public Functions
-- Use snake_case.
-- Must be verb-first.
-- Must describe the operation clearly.
+- snake_case
+- verb‑first
+- descriptive
 Examples:
 baseline_polynomial
 smooth_gaussian
@@ -105,9 +111,8 @@ apply_style_preset
 
 
 4.2 Private/Internal Functions
-- Begin with _.
-- Use snake_case.
-- May return heterogeneous tuples.
+- _leading_underscore
+- snake_case
 Examples:
 _ensure_odd
 _apply_region
@@ -117,12 +122,11 @@ _validate_schema
 
 
 5. Processor Hook Naming
-These names are frozen because the pipeline calls them dynamically.
 5.1 Required Hook
 process
 
 
-5.2 Optional Hooks
+5.2 Optional Hooks (only run if implemented)
 load
 validate
 preprocess
@@ -133,7 +137,7 @@ build_metadata
 compute_qc
 
 
-5.3 Pipeline Step Names
+5.3 Pipeline Step Names (nouns)
 "load"
 "validate"
 "preprocess"
@@ -143,13 +147,13 @@ compute_qc
 "export"
 
 
-Rule: Hook names are verbs; step names are nouns.
+Rule: Hook names are verbs; pipeline steps are nouns.
 
 6. Config Naming
 6.1 Config Classes
-- Must inherit from BaseProcessorConfig.
-- Must use PascalCase.
-- Must end with Config.
+- PascalCase
+- Must end with Config
+- Must inherit from BaseProcessorConfig (for technique configs)
 Examples:
 UVVisConfig
 IRConfig
@@ -157,11 +161,11 @@ NMRConfig
 
 
 6.2 Config Fields
-Boolean toggles must follow:
+Boolean toggles follow:
 enable_<step>
 
 
-As defined in BaseProcessorConfig:
+From BaseProcessorConfig:
 enable_load
 enable_validate
 enable_preprocess
@@ -172,9 +176,18 @@ enable_export
 
 
 6.3 Additional Config Fields
-- Must be JSON-serializable.
-- Must use snake_case.
-- Must be descriptive.
+- snake_case
+- JSON‑serializable
+- descriptive
+6.4 Technique Config Section Names
+Technique config sections must match enum values exactly:
+{
+  "uvvis": { ... },
+  "raman": { ... },
+  "nmr": { ... }
+}
+
+
 
 7. ProcessedData Naming
 7.1 Required Fields
@@ -188,11 +201,9 @@ warnings
 errors
 
 
-These names are frozen.
 7.2 Rules
-- All lowercase.
-- Use snake_case.
-- Plural fields must contain lists or dicts.
+- snake_case
+- plural fields contain lists or dicts
 
 8. Plot Naming
 8.1 PlotConfig Fields
@@ -241,7 +252,18 @@ normalize
 extra
 
 
-Rule: All plot config fields must be JSON-serializable.
+8.3 Plot Layer Type Names
+- lowercase
+- no underscores
+- no hyphens
+Examples:
+"line"
+"scatter"
+"heatmap"
+"bar"
+"histogram"
+
+
 
 9. QC Metric Naming
 9.1 QCMetric Fields
@@ -251,20 +273,17 @@ extra
 
 
 9.2 QC Metric Keys
-Stored in ProcessedData.qc as:
-qc = {
-    "snr": QCMetric(...),
-    "baseline_rms": QCMetric(...),
-}
+"snr"
+"baseline_rms"
+"peak_count"
 
 
-Rule: QC metric keys must be lower_snake_case.
 
 10. Variable Naming
 10.1 General Rules
-- Use snake_case.
-- Prefer descriptive names.
-- Loop indices may use i, j, idx.
+- snake_case
+- descriptive
+- loop indices may use i, j, idx
 10.2 Math Layer Patterns
 x_arr, y_arr
 y_smooth
@@ -276,32 +295,32 @@ x_min, x_max
 
 11. Error & Warning Naming
 11.1 Error Strings
-All error messages must begin with "Error".
+Must begin with "Error".
 Examples:
 "Error in step 'process': ..."
 "Error while building metadata: ..."
 
 
 11.2 Warning Strings
-Stored in ProcessedData.warnings as plain strings.
+Stored as plain strings.
 
 12. Metadata Naming
 12.1 Rules
-- Keys must be JSON-serializable.
-- Must use snake_case.
-- Must be descriptive.
+- snake_case
+- JSON‑serializable
+- descriptive
 Example:
-metadata = {
-    "method": "local_maxima",
-    "derivative": False,
-    "min_prominence": 0.05,
+{
+  "method": "local_maxima",
+  "derivative": false,
+  "min_prominence": 0.05
 }
 
 
 
 13. Technique Naming
 13.1 Enum Members
-UV_VIS
+UVVIS
 NMR
 IR
 RAMAN
@@ -313,7 +332,7 @@ GENERIC
 
 
 13.2 Enum Values
-"uv_vis"
+"uvvis"
 "nmr"
 "ir"
 "raman"
@@ -324,10 +343,8 @@ GENERIC
 "generic"
 
 
-Rule: Technique identifiers must always use lower_snake_case in serialized form.
 
 14. Reserved Words
-These names have special meaning and must not be reused:
 process
 load
 validate
@@ -347,43 +364,31 @@ Technique
 
 15. Documentation Naming
 15.1 Rules
-- Docs use snake_case filenames.
-- Section headers use PascalCase.
-- Terminology must match code exactly.
+- snake_case filenames
+- section headers use PascalCase
+- terminology must match code exactly
 Examples:
 naming_conventions.md
 developer_guide.md
-math_layer.md
 pipeline_overview.md
+math_layer.md
 
 
 
 16. Plotting Subsystem Naming
 16.1 Schema Classes
-Must end with Schema.
-Examples:
-FigureSchema
-PanelSchema
-TraceSchema
-AnnotationSchema
-
-
+End with Schema.
 16.2 Builder Classes
-Must end with Builder or Validator.
-Examples:
-PlotConfigBuilder
-PlotSchemaValidator
-
-
+End with Builder or Validator.
 16.3 Registry Keys
-Must use lower_snake_case.
+lower_snake_case
 Examples:
 "uvvis_spectrum"
 "multi_panel_dashboard"
 
 
 16.4 Template Files
-Must use lower_snake_case.json.
+lower_snake_case.json
 Examples:
 uvvis_spectrum.json
 chromatogram.json
@@ -391,29 +396,25 @@ chromatogram.json
 
 
 17. Services Layer Naming
-17.1 Service Files
-Must end with _service.py.
-Examples:
+17.1 Files
 plotting_service.py
 processing_service.py
 
 
-17.2 Service Classes
-Must end with Service.
-Examples:
+17.2 Classes
 PlottingService
 ProcessingService
 
 
 
 18. Plugins Naming
-18.1 Plugin Folder Structure
+18.1 Folder Structure
 plugins/<domain>/<plugin_name>/
 
 
 18.2 Plugin Metadata
-- Must include plugin.json.
-- Must define a PluginConfig class.
+- must include plugin.json
+- must define a PluginConfig class
 
 19. Runtime Layer Naming
 19.1 Files
@@ -445,9 +446,5 @@ VersionManager
 
 
 
-End of Document
+✅ End of Document
 This naming convention is now frozen for ChemWorkBench v2.
-
-
-
-
