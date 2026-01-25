@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping
 
+from chemworkbench.core.models import Technique
+
 from ..base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -54,7 +56,9 @@ class HoribaFluorescenceLoader(BaseVendorLoader):
             return {"x": x_vals, "y": y_vals, "path": str(path)}
 
         except Exception as exc:
-            raise LoaderReadError(f"Failed to read Horiba fluorescence file '{path}': {exc}") from exc
+            raise LoaderReadError(
+                f"Failed to read Horiba fluorescence file '{path}': {exc}"
+            ) from exc
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
@@ -62,10 +66,12 @@ class HoribaFluorescenceLoader(BaseVendorLoader):
                 "vendor": self.VENDOR,
                 "format": self.FORMAT,
                 "num_points": len(raw_data["x"]),
-                "technique": "fluorescence",
+                "technique": Technique.FLUORESCENCE,
             }
         except Exception as exc:
-            raise LoaderMetadataError(f"Failed to extract metadata from Horiba fluorescence: {exc}") from exc
+            raise LoaderMetadataError(
+                f"Failed to extract metadata from Horiba fluorescence: {exc}"
+            ) from exc
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
@@ -76,4 +82,6 @@ class HoribaFluorescenceLoader(BaseVendorLoader):
                 "axis_units": {"x": "nm", "y": "intensity"},
             }
         except Exception as exc:
-            raise LoaderNormalizationError(f"Failed to normalize Horiba fluorescence data: {exc}") from exc
+            raise LoaderNormalizationError(
+                f"Failed to normalize Horiba fluorescence data: {exc}"
+            ) from exc
