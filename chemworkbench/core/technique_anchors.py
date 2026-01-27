@@ -100,7 +100,7 @@ def validate_anchors(anchors: dict):
         for key in [
             "extensions", "directory_markers", "glob_patterns",
             "required_files", "header_keywords", "keywords",
-            "vendor_hints", "negative_markers"
+            "vendor_hints", "negative_markers",
         ]:
             for item in block[key]:
                 if isinstance(item, tuple):
@@ -124,11 +124,190 @@ def validate_anchors(anchors: dict):
             raise ValueError(f"Invalid metadata.tags for {tech}")
 
 # ------------------------------------------------------------
-# Technique Anchor Registry (empty templates for now)
+# Technique Anchor Registry
 # ------------------------------------------------------------
 
 TECHNIQUE_ANCHORS = {
-    Technique.UVVIS: clone_template(),
+    # --------------------------------------------------------
+    # UV-Vis spectroscopy (UVVIS)
+    # --------------------------------------------------------
+    Technique.UVVIS: {
+        **clone_template(),
+
+        # Structural anchors
+        "extensions": [
+            (".uv", 6),
+            (".spc", 5),
+            (".jdx", 5),
+            (".dx", 4),
+            (".csv", 4),
+            (".txt", 3),
+            (".tsv", 3),
+            (".dat", 3),
+            (".asc", 3),
+            (".xls", 2),
+        ],
+        "directory_markers": [
+            ("UVSignal", 6),
+            ("UV_Data", 6),
+            ("Absorbance", 5),
+            ("UVVis", 5),
+            ("UV-Vis", 5),
+            ("UV_VIS", 5),
+            ("UV", 4),
+            ("Spectra", 4),
+            ("Scan", 3),
+            ("Signals", 3),
+            ("Data", 2),
+            ("Results", 2),
+        ],
+        "glob_patterns": [
+            ("*UV*.CSV", 6),
+            ("*ABS*.CSV", 6),
+            ("*Absorbance*.txt", 5),
+            ("*Spectrum*.txt", 4),
+            ("*Spectra*.txt", 4),
+            ("*Scan*.csv", 4),
+            ("*UV*.dat", 4),
+            ("*UV*.jdx", 5),
+            ("*UV*.spc", 5),
+        ],
+        "required_files": [
+            # UV-Vis rarely has strict multi-file requirements; keep empty for now.
+        ],
+
+        # Semantic anchors
+        "header_keywords": [
+            ("wavelength", 6),
+            ("lambda", 5),
+            ("nm", 5),
+            ("nanometers", 4),
+            ("absorbance", 6),
+            ("absorb", 4),
+            ("abs", 3),
+            ("au", 4),
+            ("baseline", 3),
+            ("reference", 3),
+            ("transmittance", 5),
+            ("%t", 4),
+            ("percent_transmittance", 4),
+            ("optical density", 5),
+            ("optical_density", 5),
+            ("spectrum", 3),
+            ("spectra", 3),
+            ("scan", 3),
+        ],
+        "keywords": [
+            # UV-Vis naming variants (case-insensitive matching in engine)
+            ("uvvis", 6),
+            ("uv-vis", 6),
+            ("uv_vis", 6),
+            ("uv/vis", 6),
+            ("uv vis", 6),
+            ("uv-vis-nir", 6),
+            ("uv/vis/nir", 6),
+            ("uvvisnir", 6),
+
+            # Technique-related
+            ("uv", 4),
+            ("vis", 3),
+
+            # Absorbance-related
+            ("absorbance", 6),
+            ("absorb", 4),
+            ("abs", 3),
+            ("au", 4),
+
+            # Transmittance-related
+            ("transmittance", 5),
+            ("%t", 4),
+            ("percent_transmittance", 4),
+
+            # Wavelength-related
+            ("wavelength", 6),
+            ("lambda", 5),
+            ("nm", 5),
+            ("nanometers", 4),
+
+            # Optical-related
+            ("optical", 4),
+            ("optical_density", 5),
+            ("od", 3),
+
+            # Generic but useful
+            ("spectrum", 3),
+            ("spectra", 3),
+            ("scan", 3),
+        ],
+
+        # Numeric anchors
+        "numeric_ranges": {
+            "x": (180.0, 1100.0),
+        },
+
+        # Vendor anchors
+        "vendor_hints": [
+            ("agilent", 4),
+            ("cary", 5),
+            ("shimadzu", 4),
+            ("uvprobe", 4),
+            ("thermo", 3),
+            ("evolution", 3),
+            ("perkinelmer", 4),
+            ("lambda", 4),
+            ("ocean optics", 4),
+            ("avantes", 4),
+            ("stellarnet", 4),
+            ("malvern", 3),
+            ("hitachi", 3),
+        ],
+
+        # Binary anchors (reserved for future UV-Vis binary formats)
+        "binary_patterns": {
+        },
+
+        # Negative anchors (things that strongly suggest "not UV-Vis")
+        "negative_markers": [
+            ("fid", -8),
+            ("acqus", -8),
+            ("procs", -8),
+            ("ppm", -6),
+            ("cm-1", -6),
+            ("raman", -6),
+            ("ms1", -6),
+            ("ms2", -6),
+            ("chrom", -4),
+        ],
+
+        # Metadata
+        "metadata": {
+            "description": "Anchor terms and patterns for UV-Vis and UV-Vis-NIR absorbance/transmittance spectroscopy.",
+            "source": (
+                "Agilent Cary, Shimadzu UVProbe, Thermo Evolution, PerkinElmer Lambda, "
+                "Ocean Optics, Avantes, StellarNet, Malvern, Hitachi UV series, "
+                "academic CSV/TXT exports, JCAMP-DX UV-Vis files."
+            ),
+            "confidence": 0.9,
+            "last_updated": "2026-01-27",
+            "tags": ["uvvis", "uv-vis", "uv-vis-nir", "spectroscopy", "optical", "absorbance", "transmittance"],
+        },
+
+        # Categories (kept explicit for clarity, even though same as template)
+        "categories": {
+            "structural": ["extensions", "directory_markers", "glob_patterns", "required_files"],
+            "semantic": ["header_keywords", "keywords"],
+            "numeric": ["numeric_ranges"],
+            "vendor": ["vendor_hints"],
+            "binary": ["binary_patterns"],
+            "negative": ["negative_markers"],
+        },
+
+        "version": "1.0.0",
+    },
+
+    # --------------------------------------------------------
+    # Other techniques (templates only for now)
+    # --------------------------------------------------------
     Technique.FLUORESCENCE: clone_template(),
     Technique.IR: clone_template(),
     Technique.RAMAN: clone_template(),
