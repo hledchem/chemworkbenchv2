@@ -11,6 +11,7 @@ chemworkbenchv2/
     │   ├── pipeline.py
     │   ├── registry.py
     │   ├── routing.py
+    │   ├── technique_anchors.py          # ← NEW (full anchor-term library)
     │   └── io/
     │       ├── __init__.py
     │       ├── json_loader.py
@@ -45,14 +46,14 @@ chemworkbenchv2/
     │   └── plotting_utils.py
 
     │   # --------------------------------------------------------
-    │   # File Sniffer (3-tier detection system)
+    │   # File Detection System (NEW: DetectionEngine architecture)
     │   # --------------------------------------------------------
     │   ├── file_sniffer/
     │   │   ├── __init__.py
-    │   │   ├── file_sniffer.py
-    │   │   ├── core_detectors.py
-    │   │   ├── spectral_detectors.py
-    │   │   └── vendor/
+    │   │   ├── file_sniffer.py           # ← MODIFIED (calls DetectionEngine)
+    │   │   ├── detection_engine.py       # ← NEW (multi-signal scoring engine)
+    │   │   ├── signals.py                # ← NEW (scoring helpers)
+    │   │   └── vendor/                   # (unchanged for now)
     │   │       ├── __init__.py
     │   │       ├── agilent_detectors.py
     │   │       ├── bruker_detectors.py
@@ -68,72 +69,75 @@ chemworkbenchv2/
     │   # --------------------------------------------------------
     │   ├── loaders/
     │   │   ├── __init__.py
-    │   │
+    │   │   ├── base_loader.py            # ← MODIFIED (add TECHNIQUE attr)
+    │   │   ├── registry.py               # ← MODIFIED (ensure class registry)
+
     │   │   # Universal loaders
     │   │   ├── csv_loader.py
     │   │   ├── xlsx_loader.py
     │   │   ├── jcamp_loader.py
-    │   │
+
     │   │   # Vendor-specific loaders
     │   │   ├── agilent/
     │   │   │   ├── __init__.py
-    │   │   │   ├── agilent_uv_loader.py
+    │   │   │   ├── agilent_uv_loader.py          # ← MODIFIED (TECHNIQUE)
     │   │   │   ├── agilent_sp_loader.py
     │   │   │   ├── agilent_d_uvvis_loader.py
-    │   │   │   ├── agilent_d_chrom_loader.py
+    │   │   │   ├── agilent_d_chrom_loader.py     # ← MODIFIED
     │   │   │   └── agilent_d_ms_loader.py
-    │   │
+
     │   │   ├── bruker/
     │   │   │   ├── __init__.py
     │   │   │   ├── bruker_opus_loader.py
-    │   │   │   └── bruker_nmr_loader.py
-                    bruker_epr_loader.py
-    │   │
+    │   │   │   ├── bruker_nmr_loader.py          # ← MODIFIED
+    │   │   │   └── bruker_epr_loader.py
+
     │   │   ├── thermo/
     │   │   │   ├── __init__.py
     │   │   │   ├── thermo_spa_loader.py
     │   │   │   ├── thermo_spc_loader.py
     │   │   │   └── thermo_srs_loader.py
-    │   │
+
     │   │   ├── shimadzu/
     │   │   │   ├── __init__.py
     │   │   │   ├── shimadzu_spc_loader.py
     │   │   │   ├── shimadzu_irx_loader.py
     │   │   │   ├── shimadzu_uvs_loader.py
     │   │   │   └── shimadzu_lcd_loader.py
-    │   │
+
     │   │   ├── perkinelmer/
     │   │   │   ├── __init__.py
     │   │   │   ├── perkinelmer_sp_loader.py
     │   │   │   └── perkinelmer_spc_loader.py
-    │   │
+
     │   │   ├── waters/
     │   │   │   ├── __init__.py
     │   │   │   └── waters_raw_loader.py
-    │   │
+
     │   │   ├── jeol/
     │   │   │   ├── __init__.py
     │   │   │   └── jeol_jdf_loader.py
-    │   │
+
     │   │   ├── varian/
     │   │   │   ├── __init__.py
     │   │   │   └── varian_nmr_loader.py
-    │   │
+
     │   │   # Raman-specific loaders
     │   │   ├── raman/
     │   │   │   ├── __init__.py
     │   │   │   ├── dpt_loader.py
     │   │   │   ├── rruf_loader.py
     │   │   │   └── rruf_gz_loader.py
-    │   │
-            ├── horiba/
-            │   ├── __init__.py
-            │   └── horiba_fluor_loader.py
-                
-            ├── ch_instruments/
-            │   ├── __init__.py
-            │   └── chi_dta_loader.py
 
+    │   │   # Fluorescence loaders
+    │   │   ├── horiba/
+    │   │   │   ├── __init__.py
+    │   │   │   └── horiba_fluor_loader.py
+
+    │   │   # Electrochemistry loaders
+    │   │   ├── ch_instruments/
+    │   │   │   ├── __init__.py
+    │   │   │   └── chi_dta_loader.py
 
     # ------------------------------------------------------------
     # Plotting subsystem
@@ -222,6 +226,8 @@ tests/
     ├── test_math_spectral.py
     ├── test_pipeline.py
     ├── test_plotting_engine.py
+    ├── test_detection_engine.py      # ← NEW
+    ├── test_file_sniffer.py          # ← MODIFIED
     └── plotting/
         ├── test_schema.py
         ├── test_builder.py
