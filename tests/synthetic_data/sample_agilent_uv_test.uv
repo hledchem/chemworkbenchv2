@@ -1,0 +1,13 @@
+# Synthetic Agilent UV-Vis spectrum
+# wavelength(nm) absorbance
+200 0.01
+210 0.05
+220 0.12
+230 0.20
+240 0.32
+250 0.45
+260 0.60
+270 0.72
+280 0.80
+290 0.78
+300 0.70
