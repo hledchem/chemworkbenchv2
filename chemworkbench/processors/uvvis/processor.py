@@ -136,7 +136,9 @@ class UVVisProcessor:
         integration_results: Dict[str, float] = {}
         if config.integration_regions:
             areas = integrate_regions(x_arr, y_arr, config.integration_regions)
-            for (x_min, x_max), area in zip(config.integration_regions, areas, strict=False):
+            for (x_min, x_max), area in zip(
+                config.integration_regions, areas, strict=False
+            ):
                 key = f"region_{x_min:g}_{x_max:g}"
                 integration_results[key] = float(area)
 
@@ -237,8 +239,28 @@ class UVVisProcessor:
         }
 
     def postprocess(self, data: Any, config: BaseProcessorConfig) -> Any:
-        # v2.2: processors decide what to plot; expose via "plots" key if needed
-        return data
+        """
+        v2.2: processors decide what to plot.
+        Emit a simple line plot of the normalized spectrum.
+        """
+        try:
+            x = data["x"].tolist()
+            y = data["y"].tolist()
+        except Exception:
+            # Fail-safe: if structure is unexpected, return data unchanged
+            return data
+
+        return {
+            **data,
+            "plots": [
+                {
+                    "type": "line",
+                    "label": "UV‑Vis Spectrum",
+                    "x": x,
+                    "y": y,
+                }
+            ],
+        }
 
     # ==================================================================
     # Metadata + QC
@@ -253,7 +275,7 @@ class UVVisProcessor:
             "n_points": int(x_arr.size),
             "x_min": float(x_arr.min()) if x_arr.size > 0 else None,
             "x_max": float(x_arr.max()) if x_arr.size > 0 else None,
-            "config": config.model_dump() if hasattr(config, "model_dump") else dict(config),
+            "config": config.model_dump(),
         }
 
         integration = data.get("integration_results") if isinstance(data, dict) else None
@@ -294,6 +316,7 @@ class UVVisProcessor:
         Accepts:
             - universal list‑of‑dicts with keys "x" and "y"
             - dict with "x" and "y" lists/arrays
+
         Returns:
             (x_arr, y_arr)
         """
