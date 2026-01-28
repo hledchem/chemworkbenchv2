@@ -53,36 +53,47 @@ class PlottingService:
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
-    def render(self, plots: List[PlotConfig]) -> List[Any]:
-        """
-        Render a list of PlotConfig objects using the plotting engine.
+    def render(self, plots: List[Any]) -> List[Any]:
+    """
+    Render a list of plot payloads or PlotConfig objects.
 
-        Returns:
-            A list of backend‑rendered figure objects or UI‑ready payloads.
-        """
-        if not isinstance(plots, list):
-            raise PipelineError(
-                "PlottingService.render expected a list of PlotConfig objects"
-            )
+    Processors emit raw dicts.
+    UI/CLI may emit PlotConfig objects.
+    This method normalizes both into PlotConfig.
+    """
+    if not isinstance(plots, list):
+        raise PipelineError("PlottingService.render expected a list")
 
-        logger.debug(f"Rendering {len(plots)} plot(s)")
+    logger.debug(f"Rendering {len(plots)} plot(s)")
 
-        rendered: List[Any] = []
+    rendered = []
 
-        for idx, plot_cfg in enumerate(plots):
-            if not isinstance(plot_cfg, PlotConfig):
-                raise PipelineError(
-                    f"Invalid plot config at index {idx}: {plot_cfg}"
-                )
-
+    for idx, plot in enumerate(plots):
+        # Accept raw dicts from processors
+        if isinstance(plot, dict):
             try:
-                fig = self.engine.render(plot_cfg)
-                rendered.append(fig)
+                plot_cfg = PlotConfig(**plot)
             except Exception as exc:
                 raise PipelineError(
-                    f"Plot rendering failed for plot {idx}: {exc}"
+                    f"Invalid plot payload at index {idx}: {exc}"
                 ) from exc
 
-        logger.debug("PlottingService completed rendering")
+        # Accept PlotConfig objects from UI/CLI
+        elif isinstance(plot, PlotConfig):
+            plot_cfg = plot
 
-        return rendered
+        else:
+            raise PipelineError(
+                f"Invalid plot config at index {idx}: {plot}"
+            )
+
+        try:
+            fig = self.engine.render(plot_cfg)
+            rendered.append(fig)
+        except Exception as exc:
+            raise PipelineError(
+                f"Plot rendering failed for plot {idx}: {exc}"
+            ) from exc
+
+    logger.debug("PlottingService completed rendering")
+    return rendered
