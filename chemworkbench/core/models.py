@@ -136,13 +136,33 @@ class ProcessedData:
 class PlotConfig:
     """
     Canonical plot configuration for the v2.2 plotting engine.
+
+    This schema is intentionally simple and flat so that:
+        - processors can emit raw dicts
+        - UI/CLI can emit PlotConfig objects
+        - PlottingService can normalize both
+        - PlotEngine can render without ambiguity
     """
-    plot_type: str
+
+    # Required
+    type: str                     # "line", "scatter", "heatmap", etc.
+
+    # Optional descriptive fields
+    label: Optional[str] = None
     title: Optional[str] = None
+
+    # Data payload
     x: Optional[List[float]] = None
     y: Optional[List[float]] = None
-    z: Optional[List[List[float]]] = None
+    z: Optional[List[List[float]]] = None   # for 2D maps
+
+    # Styling
+    color: Optional[str] = None
+    linewidth: Optional[float] = None
+    alpha: Optional[float] = None
     style: Dict[str, Any] = field(default_factory=dict)
+
+    # Arbitrary metadata for UI/engine
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def require_xy(self):
