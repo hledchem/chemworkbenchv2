@@ -12,6 +12,7 @@ chemworkbenchv2/
     │   ├── registry.py
     │   ├── routing.py
     │   ├── technique_anchors.py
+            technique_detector_engine.py
     │   └── io/
     │       ├── __init__.py
     │       ├── json_loader.py
@@ -46,36 +47,37 @@ chemworkbenchv2/
     │   ├── plotting_utils.py
     │   └── normalization.py
 
-    # ------------------------------------------------------------
-    # File Detection System (NEW: DetectionEngine architecture)
-    # ------------------------------------------------------------
-    ├── file_sniffer/
-    │   ├── __init__.py
-    │   ├── file_sniffer.py              # MODIFIED (calls DetectionEngine)
-    │   ├── detection_engine.py          # NEW (multi-signal scoring engine)
-    │   ├── signals.py                   # NEW (scoring helpers)
-    │   ├── detectors/                   # NEW (structural detectors)
+    # --------------------------------------------------------
+    │   # File Detection System (NEW)
+    │   # --------------------------------------------------------
+    │   ├── file_sniffer/
     │   │   ├── __init__.py
-    │   │   ├── ascii/
+    │   │   ├── file_sniffer.py
+    │   │   ├── format_detection_engine.py    # ← NEW ENGINE
+    │   │   ├── signals.py                    # ← scoring helpers
+    │   │   ├── detectors/
     │   │   │   ├── __init__.py
-    │   │   │   ├── headered_csv_detector.py
-    │   │   │   ├── no_header_csv_detector.py
-    │   │   │   ├── two_column_ascii_detector.py
-    │   │   │   ├── multi_column_ascii_detector.py
-    │   │   └── spectroscopy/
+    │   │   │   ├── ascii/
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   ├── headered_csv_detector.py
+    │   │   │   │   ├── no_header_csv_detector.py
+    │   │   │   │   ├── two_column_ascii_detector.py
+    │   │   │   │   ├── multi_column_ascii_detector.py
+    │   │   │   └── spectroscopy/
+    │   │   │       ├── __init__.py
+    │   │   │       ├── jcamp_detector.py
+    │   │   │       # future: spc_detector.py, opus_detector.py, etc.
+    │   │   └── vendor/
     │   │       ├── __init__.py
-    │   │       ├── jcamp_detector.py
-    │   │       # future: spc_detector.py, opus_detector.py, etc.
-    │   └── vendor/
-    │       ├── __init__.py
-    │       ├── agilent_detectors.py
-    │       ├── bruker_detectors.py
-    │       ├── thermo_detectors.py
-    │       ├── shimadzu_detectors.py
-    │       ├── perkinelmer_detectors.py
-    │       ├── waters_detectors.py
-    │       ├── jeol_detectors.py
-    │       └── varian_detectors.py
+    │   │       ├── agilent_detectors.py
+    │   │       ├── bruker_detectors.py
+    │   │       ├── thermo_detectors.py
+    │   │       ├── shimadzu_detectors.py
+    │   │       ├── perkinelmer_detectors.py
+    │   │       ├── waters_detectors.py
+    │   │       ├── jeol_detectors.py
+    │   │       └── varian_detectors.py
+
 
     # ------------------------------------------------------------
     # Loaders (vendor-specific + universal)
