@@ -1,6 +1,8 @@
 """
+chemworkbench.core.pipeline
+
 Unified Processing Pipeline — ChemWorkBench v2.2
-================================================
+===============================================
 
 LLM‑friendly commentary
 -----------------------
@@ -8,7 +10,7 @@ This module implements the canonical v2.2 ingestion pipeline for ChemWorkBench.
 It orchestrates the full sequence:
 
     1. File sniffing (technique + loader selection)
-    2. Loader execution (universal list‑of‑dicts output)
+    2. Loader execution (universal structure output)
     3. Processor routing (Technique → ProcessorClass)
     4. Processor pipeline:
          - validate
@@ -21,15 +23,15 @@ It orchestrates the full sequence:
     6. PipelineResult assembly
 
 Responsibilities:
-- orchestrate the ingestion pipeline deterministically
-- ensure each stage receives the correct data structure
-- provide a single entrypoint for CLI, API, and UI layers
+- Orchestrate the ingestion pipeline deterministically
+- Ensure each stage receives the correct data structure
+- Provide a single entrypoint for CLI, API, and UI layers
 
 Non‑responsibilities:
-- technique detection (handled by the anchor engine)
-- loader selection (handled by the loader registry)
-- scientific interpretation (handled by processors)
-- plotting logic (handled by the plotting service)
+- Technique detection logic (handled by the sniffer/anchor engine)
+- Loader selection logic (handled by the loader registry)
+- Scientific interpretation (handled by processors)
+- Plotting logic (handled by the plotting service)
 """
 
 from __future__ import annotations
@@ -42,10 +44,8 @@ from chemworkbench.core.models import (
     DetectedFormat,
 )
 from chemworkbench.utils.file_sniffer.file_sniffer import sniff_file
-    # universal loader selection
 from chemworkbench.utils.loaders.registry import select_loader_for_path
 from chemworkbench.core.routing import get_processor_for_technique
-
 from chemworkbench.services.plotting_service import PlottingService
 from chemworkbench.runtime.logging import get_logger
 from chemworkbench.runtime.errors import PipelineError
@@ -61,9 +61,18 @@ logger = get_logger(__name__)
 class Pipeline:
     """
     Canonical v2.2 ingestion pipeline orchestrator.
+
+    This class is intentionally small and deterministic. It wires together:
+        - file sniffing
+        - loader selection + execution
+        - processor routing + execution
+        - plotting
+        - result assembly
+
+    All scientific logic lives in loaders, processors, and services.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.plotting_service = PlottingService()
 
     # ------------------------------------------------------------------
@@ -76,7 +85,7 @@ class Pipeline:
         Steps:
             1. Sniff file → DetectedFormat
             2. Select loader
-            3. Load raw data (universal list‑of‑dicts)
+            3. Load raw data (universal structure)
             4. Resolve processor
             5. Processor pipeline:
                  validate → preprocess → process → postprocess
@@ -92,7 +101,7 @@ class Pipeline:
         logger.info(f"Starting pipeline for: {path}")
 
         # --------------------------------------------------------------
-        # 1. Sniff file
+        # 1. Sniff file (technique + basic format)
         # --------------------------------------------------------------
         fmt: DetectedFormat = sniff_file(path)
         logger.debug(f"Detected format: {fmt}")
@@ -108,14 +117,14 @@ class Pipeline:
         logger.info(f"Using loader: {loader_cls.__name__}")
 
         # --------------------------------------------------------------
-        # 3. Load raw data
+        # 3. Load raw data (universal structure)
         # --------------------------------------------------------------
         try:
             raw_bundle: RawDataBundle = loader.load(path)
         except Exception as exc:
             raise PipelineError(f"Loader failed: {exc}") from exc
 
-        logger.debug(f"Loaded raw data: {raw_bundle}")
+        logger.debug(f"Loaded raw data bundle: {raw_bundle}")
 
         # --------------------------------------------------------------
         # 4. Resolve processor
@@ -127,13 +136,19 @@ class Pipeline:
         processor = processor_cls()
         logger.info(f"Using processor: {processor_cls.__name__}")
 
-        # --------------------------------------------------------------
-        # 5. Processor pipeline (corrected universal data flow)
-        # --------------------------------------------------------------
-        config = processor.config if hasattr(processor, "config") else processor_cls.config
+        # v2.2 rule: processors expose instance‑level config only
+        if not hasattr(processor, "config"):
+            raise PipelineError(
+                f"Processor {processor_cls.__name__} does not define an instance‑level 'config'"
+            )
 
+        config = processor.config
+
+        # --------------------------------------------------------------
+        # 5. Processor pipeline (universal data flow)
+        # --------------------------------------------------------------
         try:
-            # Pass ONLY the universal list‑of‑dicts, not the RawDataBundle wrapper
+            # Pass ONLY the universal data payload, not the RawDataBundle wrapper
             validated = processor.validate(raw_bundle.data, config)
             preprocessed = processor.preprocess(validated, config)
             processed = processor.process(preprocessed, config)
@@ -144,14 +159,20 @@ class Pipeline:
         # --------------------------------------------------------------
         # 6. Metadata + QC
         # --------------------------------------------------------------
-        metadata = processor.build_metadata(postprocessed, config)
-        qc = processor.compute_qc(postprocessed, config)
+        try:
+            metadata = processor.build_metadata(postprocessed, config)
+            qc = processor.compute_qc(postprocessed, config)
+        except Exception as exc:
+            raise PipelineError(f"Metadata/QC computation failed: {exc}") from exc
 
         # --------------------------------------------------------------
         # 7. Plot generation
         # --------------------------------------------------------------
         try:
-            plots = self.plotting_service.render(postprocessed.get("plots", []))
+            # v2.2 convention: processors decide what to plot and expose
+            # a plot configuration or data structure in postprocessed.
+            plot_payload = postprocessed.get("plots", [])
+            plots = self.plotting_service.render(plot_payload)
         except Exception as exc:
             raise PipelineError(f"Plotting failed: {exc}") from exc
 
@@ -185,6 +206,6 @@ pipeline = Pipeline()
 
 def run_pipeline(path: str | Path) -> PipelineResult:
     """
-    Backwards‑compatible wrapper for tests and CLI.
+    Backwards‑compatible wrapper for tests, notebooks, and legacy code.
     """
     return pipeline.run(path)
