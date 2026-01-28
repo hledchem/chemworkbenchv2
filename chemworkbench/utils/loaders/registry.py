@@ -49,7 +49,7 @@ from .jeol.jeol_jdf_loader import JEOLJDFLoader
 
 # PerkinElmer
 from .perkinelmer.perkinelmer_sp_loader import PerkinElmerSPLoader
-from .perkinelmer.perkinelmer_spc_loader import PerkinelmerSPCLoader
+from .perkinelmer.perkinelmer_spc_loader import PerkinElmerSPCLoader
 
 # Raman
 from .raman.dpt_loader import DPTLoader
