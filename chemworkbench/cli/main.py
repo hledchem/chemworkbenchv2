@@ -1,17 +1,23 @@
 """
 chemworkbench.cli.main
 
-Primary command-line interface for ChemWorkBench v2.
+ChemWorkBench v2.2 Command-Line Interface
+-----------------------------------------
 
 Supports:
     chemwb run <file>
     chemwb process <file>
     chemwb plot <plot_config.json>
 
-This CLI is designed to work cleanly in PowerShell, CMD, Bash, and zsh.
+Design goals (v2.2):
+- Deterministic, minimal, and dependency‑free
+- Works cleanly in PowerShell, CMD, Bash, and zsh
+- CLI is a thin wrapper around the API layer
+- Debug mode integrates with the v2.2 logging system
 """
 
 from __future__ import annotations
+
 import argparse
 import json
 from pathlib import Path
@@ -20,19 +26,21 @@ from chemworkbench.api.run_processing import run_processing_from_file
 from chemworkbench.api.run_plotting import run_plotting
 from chemworkbench.core.pipeline import pipeline
 from chemworkbench.core.models import PlotConfig
-from chemworkbench.runtime.logging import enable_debug_logging, get_logger
+from chemworkbench.runtime.logging import enable_debug_mode, get_logger
 from chemworkbench.runtime.errors import PipelineError
 
 
 logger = get_logger(__name__)
 
 
-# ----------------------------------------------------------------------
+# ======================================================================
 # Command implementations
-# ----------------------------------------------------------------------
+# ======================================================================
 
 def cmd_run(args):
-    """Run the full pipeline on a file."""
+    """
+    Run the full pipeline on a file.
+    """
     try:
         result = run_processing_from_file(args.file)
         print(f"Technique: {result.raw.technique.name}")
@@ -42,17 +50,21 @@ def cmd_run(args):
 
 
 def cmd_process(args):
-    """Run processing only (no plotting)."""
+    """
+    Run processing only (no plotting).
+    """
     try:
         result = pipeline.run(args.file)
         print(f"Technique: {result.raw.technique.name}")
-        print(f"Processed metadata: {result.processed.metadata}")
+        print(f"Processed keys: {list(result.processed.keys())}")
     except PipelineError as exc:
         print(f"Error: {exc}")
 
 
 def cmd_plot(args):
-    """Render plots from a PlotConfig JSON file."""
+    """
+    Render plots from a PlotConfig JSON file.
+    """
     try:
         with open(args.json, "r") as f:
             cfgs = json.load(f)
@@ -64,14 +76,14 @@ def cmd_plot(args):
         print(f"Error: {exc}")
 
 
-# ----------------------------------------------------------------------
+# ======================================================================
 # CLI entrypoint
-# ----------------------------------------------------------------------
+# ======================================================================
 
 def main():
     parser = argparse.ArgumentParser(
         prog="chemwb",
-        description="ChemWorkBench v2 Command-Line Interface",
+        description="ChemWorkBench v2.2 Command-Line Interface",
     )
 
     parser.add_argument(
@@ -99,9 +111,12 @@ def main():
 
     args = parser.parse_args()
 
+    # Enable debug mode if requested
     if args.debug:
-        enable_debug_logging()
+        enable_debug_mode()
+        logger.debug("Debug mode enabled")
 
+    # Dispatch to the selected command
     if hasattr(args, "func"):
         args.func(args)
     else:
