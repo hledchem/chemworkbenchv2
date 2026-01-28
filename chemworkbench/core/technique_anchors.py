@@ -4,6 +4,28 @@ from chemworkbench.core.models import Technique
 import copy
 
 # ------------------------------------------------------------
+# IMPORTANT: All anchor patterns must be written in canonical,
+# normalized form. The DetectionEngine applies normalization
+# (lowercasing, unicode normalization, punctuation stripping,
+# separator normalization) BEFORE matching against anchors.
+#
+# Therefore:
+# - Do NOT include punctuation variants (uv-vis, uv_vis, uv/vis)
+# - Do NOT include capitalization variants (UVVis, UV-VIS)
+# - Do NOT include vendor-specific quirks
+# - Do NOT include whitespace variants
+#
+# Anchors must be written in their canonical normalized form:
+#   "uvvis", "absorbance", "transmittance", "opticaldensity"
+#
+# This ensures:
+# - LLM-safe extension
+# - plugin-safe behavior
+# - deterministic scoring
+# - future ML integration
+# ------------------------------------------------------------
+
+# ------------------------------------------------------------
 # Anchor Library Versioning
 # ------------------------------------------------------------
 ANCHOR_LIBRARY_VERSION = "1.0.0"
@@ -11,43 +33,17 @@ ANCHOR_LIBRARY_VERSION = "1.0.0"
 # ------------------------------------------------------------
 # Base template for all technique anchor definitions
 # ------------------------------------------------------------
-# Each field supports:
-# - simple strings
-# - weighted tuples: (pattern, weight)
-# - negative markers: (pattern, negative_weight)
-#
-# This structure is designed for:
-# - LLM interpretability
-# - plugin extension
-# - future ML integration
-# - deterministic scoring
-# - explainability
-# ------------------------------------------------------------
-
 BASE_TECHNIQUE_TEMPLATE = {
-    # Structural signals
-    "extensions": [],            # list[str] or list[(str, weight)]
-    "directory_markers": [],     # list[str] or list[(str, weight)]
-    "glob_patterns": [],         # list[str] or list[(str, weight)]
-    "required_files": [],        # list[str] or list[(str, weight)]
-
-    # Semantic signals
-    "header_keywords": [],       # list[str] or list[(str, weight)]
-    "keywords": [],              # list[str] or list[(str, weight)]
-
-    # Numeric signals
-    "numeric_ranges": {},        # dict[str, tuple[min, max]]
-
-    # Vendor signals
-    "vendor_hints": [],          # list[str] or list[(str, weight)]
-
-    # Binary signals (NMR/EPR only)
-    "binary_patterns": {},       # dict[str, Any]
-
-    # Negative signals (reduce score)
-    "negative_markers": [],      # list[str] or list[(str, negative_weight)]
-
-    # Metadata for LLMs, documentation, provenance
+    "extensions": [],
+    "directory_markers": [],
+    "glob_patterns": [],
+    "required_files": [],
+    "header_keywords": [],
+    "keywords": [],
+    "numeric_ranges": {},
+    "vendor_hints": [],
+    "binary_patterns": {},
+    "negative_markers": [],
     "metadata": {
         "description": "",
         "source": "",
@@ -55,8 +51,6 @@ BASE_TECHNIQUE_TEMPLATE = {
         "last_updated": "2026-01-27",
         "tags": [],
     },
-
-    # Optional categories for LLM reasoning
     "categories": {
         "structural": ["extensions", "directory_markers", "glob_patterns", "required_files"],
         "semantic": ["header_keywords", "keywords"],
@@ -65,23 +59,18 @@ BASE_TECHNIQUE_TEMPLATE = {
         "binary": ["binary_patterns"],
         "negative": ["negative_markers"],
     },
-
-    # Versioning for reproducibility
     "version": "1.0.0",
 }
 
 # ------------------------------------------------------------
-# Template cloning (deep copy to avoid shared mutable state)
+# Template cloning
 # ------------------------------------------------------------
-
 def clone_template():
-    """Return a deep copy of the base technique template."""
     return copy.deepcopy(BASE_TECHNIQUE_TEMPLATE)
 
 # ------------------------------------------------------------
-# Schema validation for anchor definitions
+# Schema validation
 # ------------------------------------------------------------
-
 def validate_anchors(anchors: dict):
     required_keys = set(BASE_TECHNIQUE_TEMPLATE.keys())
 
@@ -96,7 +85,6 @@ def validate_anchors(anchors: dict):
         if extra:
             raise ValueError(f"Technique {tech} has unknown keys: {extra}")
 
-        # Validate weighted lists
         for key in [
             "extensions", "directory_markers", "glob_patterns",
             "required_files", "header_keywords", "keywords",
@@ -107,12 +95,10 @@ def validate_anchors(anchors: dict):
                     if not isinstance(item[0], str) or not isinstance(item[1], (int, float)):
                         raise ValueError(f"Invalid weighted entry in {tech}.{key}: {item}")
 
-        # Validate numeric ranges
         for axis, rng in block["numeric_ranges"].items():
             if not (isinstance(rng, tuple) and len(rng) == 2):
                 raise ValueError(f"Invalid numeric range for {tech}.{axis}: {rng}")
 
-        # Validate metadata
         meta = block["metadata"]
         if not isinstance(meta.get("description", ""), str):
             raise ValueError(f"Invalid metadata.description for {tech}")
@@ -126,15 +112,10 @@ def validate_anchors(anchors: dict):
 # ------------------------------------------------------------
 # Technique Anchor Registry
 # ------------------------------------------------------------
-
 TECHNIQUE_ANCHORS = {
-    # --------------------------------------------------------
-    # UV-Vis spectroscopy (UVVIS)
-    # --------------------------------------------------------
     Technique.UVVIS: {
         **clone_template(),
 
-        # Structural anchors
         "extensions": [
             (".uv", 6),
             (".spc", 5),
@@ -147,36 +128,31 @@ TECHNIQUE_ANCHORS = {
             (".asc", 3),
             (".xls", 2),
         ],
+
         "directory_markers": [
-            ("UVSignal", 6),
-            ("UV_Data", 6),
-            ("Absorbance", 5),
-            ("UVVis", 5),
-            ("UV-Vis", 5),
-            ("UV_VIS", 5),
-            ("UV", 4),
-            ("Spectra", 4),
-            ("Scan", 3),
-            ("Signals", 3),
-            ("Data", 2),
-            ("Results", 2),
-        ],
-        "glob_patterns": [
-            ("*UV*.CSV", 6),
-            ("*ABS*.CSV", 6),
-            ("*Absorbance*.txt", 5),
-            ("*Spectrum*.txt", 4),
-            ("*Spectra*.txt", 4),
-            ("*Scan*.csv", 4),
-            ("*UV*.dat", 4),
-            ("*UV*.jdx", 5),
-            ("*UV*.spc", 5),
-        ],
-        "required_files": [
-            # UV-Vis rarely has strict multi-file requirements; keep empty for now.
+            ("uvsignal", 6),
+            ("uvdata", 6),
+            ("absorbance", 5),
+            ("uvvis", 5),
+            ("uv", 4),
+            ("spectra", 4),
+            ("scan", 3),
+            ("signals", 3),
+            ("data", 2),
+            ("results", 2),
         ],
 
-        # Semantic anchors
+        "glob_patterns": [
+            ("uv", 6),
+            ("abs", 6),
+            ("absorbance", 5),
+            ("spectrum", 4),
+            ("spectra", 4),
+            ("scan", 4),
+        ],
+
+        "required_files": [],
+
         "header_keywords": [
             ("wavelength", 6),
             ("lambda", 5),
@@ -189,63 +165,46 @@ TECHNIQUE_ANCHORS = {
             ("baseline", 3),
             ("reference", 3),
             ("transmittance", 5),
-            ("%t", 4),
-            ("percent_transmittance", 4),
-            ("optical density", 5),
-            ("optical_density", 5),
+            ("percenttransmittance", 4),
+            ("opticaldensity", 5),
             ("spectrum", 3),
             ("spectra", 3),
             ("scan", 3),
         ],
+
         "keywords": [
-            # UV-Vis naming variants (case-insensitive matching in engine)
             ("uvvis", 6),
-            ("uv-vis", 6),
-            ("uv_vis", 6),
-            ("uv/vis", 6),
-            ("uv vis", 6),
-            ("uv-vis-nir", 6),
-            ("uv/vis/nir", 6),
             ("uvvisnir", 6),
 
-            # Technique-related
             ("uv", 4),
             ("vis", 3),
 
-            # Absorbance-related
             ("absorbance", 6),
             ("absorb", 4),
             ("abs", 3),
             ("au", 4),
 
-            # Transmittance-related
             ("transmittance", 5),
-            ("%t", 4),
-            ("percent_transmittance", 4),
+            ("percenttransmittance", 4),
 
-            # Wavelength-related
             ("wavelength", 6),
             ("lambda", 5),
             ("nm", 5),
             ("nanometers", 4),
 
-            # Optical-related
             ("optical", 4),
-            ("optical_density", 5),
+            ("opticaldensity", 5),
             ("od", 3),
 
-            # Generic but useful
             ("spectrum", 3),
             ("spectra", 3),
             ("scan", 3),
         ],
 
-        # Numeric anchors
         "numeric_ranges": {
             "x": (180.0, 1100.0),
         },
 
-        # Vendor anchors
         "vendor_hints": [
             ("agilent", 4),
             ("cary", 5),
@@ -255,31 +214,27 @@ TECHNIQUE_ANCHORS = {
             ("evolution", 3),
             ("perkinelmer", 4),
             ("lambda", 4),
-            ("ocean optics", 4),
+            ("oceanoptics", 4),
             ("avantes", 4),
             ("stellarnet", 4),
             ("malvern", 3),
             ("hitachi", 3),
         ],
 
-        # Binary anchors (reserved for future UV-Vis binary formats)
-        "binary_patterns": {
-        },
+        "binary_patterns": {},
 
-        # Negative anchors (things that strongly suggest "not UV-Vis")
         "negative_markers": [
             ("fid", -8),
             ("acqus", -8),
             ("procs", -8),
             ("ppm", -6),
-            ("cm-1", -6),
+            ("cm1", -6),
             ("raman", -6),
             ("ms1", -6),
             ("ms2", -6),
             ("chrom", -4),
         ],
 
-        # Metadata
         "metadata": {
             "description": "Anchor terms and patterns for UV-Vis and UV-Vis-NIR absorbance/transmittance spectroscopy.",
             "source": (
@@ -289,25 +244,12 @@ TECHNIQUE_ANCHORS = {
             ),
             "confidence": 0.9,
             "last_updated": "2026-01-27",
-            "tags": ["uvvis", "uv-vis", "uv-vis-nir", "spectroscopy", "optical", "absorbance", "transmittance"],
-        },
-
-        # Categories (kept explicit for clarity, even though same as template)
-        "categories": {
-            "structural": ["extensions", "directory_markers", "glob_patterns", "required_files"],
-            "semantic": ["header_keywords", "keywords"],
-            "numeric": ["numeric_ranges"],
-            "vendor": ["vendor_hints"],
-            "binary": ["binary_patterns"],
-            "negative": ["negative_markers"],
+            "tags": ["uvvis", "uvvisnir", "spectroscopy", "optical", "absorbance", "transmittance"],
         },
 
         "version": "1.0.0",
     },
 
-    # --------------------------------------------------------
-    # Other techniques (templates only for now)
-    # --------------------------------------------------------
     Technique.FLUORESCENCE: clone_template(),
     Technique.IR: clone_template(),
     Technique.RAMAN: clone_template(),
@@ -318,6 +260,29 @@ TECHNIQUE_ANCHORS = {
     Technique.LCMS: clone_template(),
     Technique.CHROMATOGRAPHY: clone_template(),
 }
+
+# ------------------------------------------------------------
+# Normalize anchors before validation
+# ------------------------------------------------------------
+from chemworkbench.utils.normalization import normalize_token
+
+def _normalize_anchor_block(block: dict):
+    for key in [
+        "extensions", "directory_markers", "glob_patterns",
+        "required_files", "header_keywords", "keywords",
+        "vendor_hints", "negative_markers",
+    ]:
+        normalized_list = []
+        for item in block[key]:
+            if isinstance(item, tuple):
+                pattern, weight = item
+                normalized_list.append((normalize_token(pattern), weight))
+            else:
+                normalized_list.append(normalize_token(item))
+        block[key] = normalized_list
+
+for _tech, _block in TECHNIQUE_ANCHORS.items():
+    _normalize_anchor_block(_block)
 
 # ------------------------------------------------------------
 # Validate on import
