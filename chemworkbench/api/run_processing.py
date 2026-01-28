@@ -1,24 +1,32 @@
 """
 api/run_processing.py
 
-API entrypoint for running the ChemWorkBench v2 processing pipeline
-on already-loaded raw data or directly on a file path.
+ChemWorkBench v2.2 — Processing API Layer
+-----------------------------------------
 
-This module provides a clean, stable interface for:
+This module provides stable, high-level entrypoints for:
     - CLI commands
     - HTTP API endpoints
     - UI integrations
     - Notebook workflows
 
-It delegates actual work to:
-    - FileService
-    - Pipeline
-    - ProcessingService
+Design goals (v2.2):
+- Thin wrapper around the pipeline and processing service
+- No scientific logic
+- No loader or processor selection logic
+- Clean error boundaries (PipelineError)
+- JSON‑friendly return structures for UI/HTTP layers
+
+Responsibilities:
+- Validate inputs
+- Delegate to pipeline or processing service
+- Normalize exceptions into PipelineError
 """
 
 from __future__ import annotations
+
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 from chemworkbench.core.pipeline import pipeline
 from chemworkbench.services.file_service import file_service
@@ -30,17 +38,16 @@ from chemworkbench.runtime.logging import get_logger
 
 logger = get_logger(__name__)
 
-
 processing_service = ProcessingService()
 
 
-# ----------------------------------------------------------------------
+# ======================================================================
 # Public API
-# ----------------------------------------------------------------------
+# ======================================================================
 
 def run_processing_from_file(path: str | Path) -> PipelineResult:
     """
-    Full end-to-end processing from a file path.
+    Run the full v2.2 ingestion pipeline on a file path.
 
     Equivalent to:
         pipeline.run(path)
@@ -66,11 +73,10 @@ def run_processing_from_raw(raw: RawDataBundle) -> Dict[str, Any]:
         - Custom loaders
         - Plugin integrations
 
-    Returns:
-        A JSON-serializable dict containing:
-            - technique
-            - processed metadata
-            - number of plots
+    Returns a JSON‑serializable dict containing:
+        - technique
+        - processed metadata
+        - number of plots
     """
     if not isinstance(raw, RawDataBundle):
         raise PipelineError("run_processing_from_raw expected a RawDataBundle")
