@@ -44,6 +44,7 @@ chemworkbenchv2/
     │   ├── math_core.py
     │   ├── math_technique.py
     │   └── plotting_utils.py
+            normalization.py
 
     │   # --------------------------------------------------------
     │   # File Detection System (NEW: DetectionEngine architecture)
