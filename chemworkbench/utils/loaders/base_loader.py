@@ -1,14 +1,28 @@
 """
-Base loader protocol and common abstractions for all vendor and universal loaders.
+Base Loader Framework — ChemWorkBench v2.2
+==========================================
 
-All concrete loaders (e.g., Agilent, Bruker, Thermo, Waters, etc.) should inherit
-from `BaseVendorLoader` and implement the abstract methods defined here.
+LLM‑friendly commentary
+-----------------------
+This module defines the canonical loader interface for ChemWorkBench v2.2.
+Loaders are responsible only for:
 
-This module is intentionally vendor- and technique-agnostic. It defines:
-- The canonical loader interface (`BaseLoaderProtocol`)
-- A concrete base class (`BaseVendorLoader`) with shared utilities
-- A standard result container (`LoaderResult`)
-- Common exceptions for loader failures
+    - identifying whether they can handle a file (sniff)
+    - reading vendor‑specific raw data (load_raw)
+    - extracting metadata (extract_metadata)
+    - converting raw data into the universal list‑of‑dicts format (to_universal)
+
+Responsibilities:
+- provide a deterministic, plugin‑safe loader interface
+- return RawDataBundle objects for the pipeline
+- isolate vendor‑specific parsing logic
+- ensure universal output is stable and consistent
+
+Non‑responsibilities:
+- technique detection (handled by the anchor engine)
+- loader selection (handled by the loader registry)
+- scientific interpretation (handled by processors)
+- plotting or visualization
 """
 
 from __future__ import annotations
@@ -17,18 +31,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional, Protocol, runtime_checkable
 
+from chemworkbench.core.models import RawDataBundle
+from chemworkbench.core.models import Technique
 
-# ---------------------------------------------------------------------------
+
+# ======================================================================
 # Exceptions
-# ---------------------------------------------------------------------------
-
+# ======================================================================
 
 class LoaderError(Exception):
-    """Base exception for all loader-related errors."""
+    """Base exception for all loader‑related errors."""
 
 
 class LoaderSniffError(LoaderError):
-    """Raised when a loader cannot confidently identify a file as its own."""
+    """Raised when a loader cannot confidently identify a file."""
 
 
 class LoaderReadError(LoaderError):
@@ -43,196 +59,114 @@ class LoaderNormalizationError(LoaderError):
     """Raised when conversion to the universal data model fails."""
 
 
-# ---------------------------------------------------------------------------
-# Result container
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class LoaderResult:
-    """
-    Canonical output of any loader.
-
-    This is the handshake object between loaders and the rest of the system.
-    It is intentionally generic so that:
-    - Loaders can return whatever raw structures they need internally
-    - Processors and the pipeline can rely on consistent keys and semantics
-    """
-
-    # Raw, vendor-specific data structure (e.g., parsed binary, dict, DataFrame, etc.)
-    raw_data: Any
-
-    # Normalized, universal representation (e.g., spectral arrays, chromatograms, etc.)
-    universal_data: Any
-
-    # Metadata as a simple mapping (instrument, acquisition, sample, etc.)
-    metadata: Mapping[str, Any]
-
-    # Optional hints for routing/processing (e.g., "uvvis", "ir", "nmr", "chrom", "ms")
-    technique_hint: Optional[str] = None
-
-    # Optional vendor/format identifiers (e.g., "agilent", "bruker_opus", "waters_raw")
-    vendor: Optional[str] = None
-    format_name: Optional[str] = None
-
-
-# ---------------------------------------------------------------------------
-# Protocol definition
-# ---------------------------------------------------------------------------
-
+# ======================================================================
+# Loader Protocol (structural)
+# ======================================================================
 
 @runtime_checkable
 class BaseLoaderProtocol(Protocol):
     """
     Structural protocol for all loaders.
 
-    Any loader (class or instance) that satisfies this protocol can be used
-    by the pipeline, regardless of its concrete base class.
+    Any class implementing this protocol can be used by the loader registry
+    and pipeline, regardless of inheritance.
     """
 
-    # Class-level identifiers (should be overridden by concrete loaders)
+    # Class‑level identifiers
     VENDOR: str
-    FORMAT: str  # e.g., "opus", "d_uvvis", "raw", "jcamp"
-    EXTENSIONS: tuple[str, ...]  # file extensions this loader can handle
+    FORMAT: str
+    EXTENSIONS: tuple[str, ...]
 
     def sniff(self, path: Path) -> bool:
-        """
-        Lightweight check: does this file *look like* something this loader can handle?
-
-        This should be:
-        - Fast (no heavy parsing)
-        - Conservative (return False if unsure)
-        - Deterministic
-
-        Returns:
-            True if the loader believes it can handle this file, False otherwise.
-        """
+        """Return True if this loader can handle the file."""
         ...
 
     def load_raw(self, path: Path) -> Any:
-        """
-        Read and parse the vendor-specific file into a raw in-memory structure.
-
-        This method is allowed to be relatively heavy (I/O, parsing, etc.).
-
-        Raises:
-            LoaderReadError on failure.
-        """
+        """Read vendor‑specific raw data."""
         ...
 
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
-        """
-        Extract metadata from the raw vendor-specific structure.
-
-        This should return a simple mapping (dict-like) with stable keys such as:
-        - "instrument"
-        - "acquisition_datetime"
-        - "operator"
-        - "sample_id"
-        - "method_name"
-        - etc.
-
-        Raises:
-            LoaderMetadataError on failure.
-        """
+        """Extract metadata from raw vendor‑specific structure."""
         ...
 
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
-        """
-        Convert the raw vendor-specific structure into the universal data model.
-
-        The exact type of the universal data is defined by the core models layer
-        (e.g., spectral arrays, chromatograms, NMR datasets, etc.).
-
-        Raises:
-            LoaderNormalizationError on failure.
-        """
+        """Convert raw data to universal list‑of‑dicts format."""
         ...
 
-    def load(self, path: Path) -> LoaderResult:
-        """
-        High-level convenience method: full load pipeline.
-
-        Steps:
-        1. load_raw(path)
-        2. extract_metadata(raw_data)
-        3. to_universal(raw_data, metadata)
-        4. wrap into LoaderResult
-
-        Raises:
-            LoaderError subclasses on failure.
-        """
+    def load(self, path: Path) -> RawDataBundle:
+        """Full load pipeline returning a RawDataBundle."""
         ...
 
 
-# ---------------------------------------------------------------------------
-# Concrete base class
-# ---------------------------------------------------------------------------
-
+# ======================================================================
+# Concrete Base Class (v2.2)
+# ======================================================================
 
 class BaseVendorLoader(BaseLoaderProtocol):
     """
-    Concrete base class implementing the common loader pipeline.
+    Concrete base class implementing the v2.2 loader pipeline.
 
-    Vendor-specific loaders should inherit from this and override:
-    - VENDOR
-    - FORMAT
-    - EXTENSIONS
-    - sniff()
-    - load_raw()
-    - extract_metadata()
-    - to_universal()
+    Vendor‑specific loaders should override:
+        - VENDOR
+        - FORMAT
+        - EXTENSIONS
+        - sniff()
+        - load_raw()
+        - extract_metadata()
+        - to_universal()
     """
 
-    # Sensible defaults; concrete loaders MUST override these.
     VENDOR: str = "generic"
     FORMAT: str = "generic"
     EXTENSIONS: tuple[str, ...] = ()
 
+    # ------------------------------------------------------------------
+    # Sniffing
+    # ------------------------------------------------------------------
     def sniff(self, path: Path) -> bool:  # type: ignore[override]
         """
-        Default sniff implementation: checks file extension only.
+        Default sniff implementation: extension check only.
 
-        Concrete loaders are encouraged to override this with more robust logic
-        (e.g., magic bytes, header inspection, directory structure checks).
+        Concrete loaders are encouraged to override this with:
+            - magic byte checks
+            - directory structure checks
+            - header inspection
         """
         suffix = path.suffix.lower()
         return suffix in {ext.lower() for ext in self.EXTENSIONS}
 
+    # ------------------------------------------------------------------
+    # Raw loading
+    # ------------------------------------------------------------------
     def load_raw(self, path: Path) -> Any:  # type: ignore[override]
-        """
-        Default implementation raises, forcing concrete loaders to implement.
-
-        Concrete loaders must implement this method.
-        """
         raise NotImplementedError("load_raw() must be implemented by concrete loaders.")
 
+    # ------------------------------------------------------------------
+    # Metadata extraction
+    # ------------------------------------------------------------------
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:  # type: ignore[override]
-        """
-        Default implementation returns an empty dict.
-
-        Concrete loaders are encouraged to override this to provide rich metadata.
-        """
         return {}
 
+    # ------------------------------------------------------------------
+    # Universal conversion
+    # ------------------------------------------------------------------
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:  # type: ignore[override]
-        """
-        Default implementation raises, forcing concrete loaders to implement.
-
-        Concrete loaders must implement this method to produce the universal data model.
-        """
         raise NotImplementedError("to_universal() must be implemented by concrete loaders.")
 
-    def load(self, path: Path) -> LoaderResult:  # type: ignore[override]
+    # ------------------------------------------------------------------
+    # Full load pipeline
+    # ------------------------------------------------------------------
+    def load(self, path: Path) -> RawDataBundle:  # type: ignore[override]
         """
-        Full load pipeline with standardized error handling.
+        Full v2.2 loader pipeline:
 
-        This method orchestrates:
-        - sniff (optional, may be used by the caller instead)
-        - load_raw
-        - extract_metadata
-        - to_universal
-        - packaging into LoaderResult
+            1. load_raw()
+            2. extract_metadata()
+            3. to_universal()
+            4. wrap into RawDataBundle
+
+        Loaders do NOT determine technique. That is handled by the
+        detection engine and routing layer.
         """
         try:
             raw = self.load_raw(path)
@@ -248,39 +182,16 @@ class BaseVendorLoader(BaseLoaderProtocol):
             universal = self.to_universal(raw, metadata)
         except Exception as exc:
             raise LoaderNormalizationError(
-                f"Failed to normalize data from '{path}' to universal model: {exc}"
+                f"Failed to convert '{path}' to universal format: {exc}"
             ) from exc
 
-        # Ensure metadata is a plain dict for serialization friendliness
+        # Ensure metadata is a plain dict
         if not isinstance(metadata, dict):
             metadata = dict(metadata)
 
-        return LoaderResult(
-            raw_data=raw,
-            universal_data=universal,
+        return RawDataBundle(
+            technique=Technique.UNKNOWN,  # technique is determined upstream
+            data=universal,
             metadata=metadata,
-            technique_hint=self._infer_technique_hint(metadata),
-            vendor=self.VENDOR,
-            format_name=self.FORMAT,
+            source_path=str(path),
         )
-
-    # ---------------------------------------------------------------------
-    # Optional helpers
-    # ---------------------------------------------------------------------
-
-    def _infer_technique_hint(self, metadata: Mapping[str, Any]) -> Optional[str]:
-        """
-        Optional helper to infer a technique hint from metadata.
-
-        Concrete loaders may override this to provide better hints, e.g.:
-        - "uvvis"
-        - "ir"
-        - "raman"
-        - "nmr"
-        - "chrom"
-        - "ms"
-        """
-        technique = metadata.get("technique") or metadata.get("measurement_type")
-        if isinstance(technique, str):
-            return technique.lower()
-        return None
