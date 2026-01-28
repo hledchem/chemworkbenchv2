@@ -40,6 +40,11 @@ logger = get_logger(__name__)
 class PlottingService:
     """
     High‑level wrapper around the backend‑agnostic PlotEngine.
+
+    This service:
+        - validates PlotConfig objects
+        - delegates rendering to PlotEngine
+        - returns backend‑specific figure objects or UI‑ready payloads
     """
 
     def __init__(self):
@@ -62,7 +67,7 @@ class PlottingService:
 
         logger.debug(f"Rendering {len(plots)} plot(s)")
 
-        rendered = []
+        rendered: List[Any] = []
 
         for idx, plot_cfg in enumerate(plots):
             if not isinstance(plot_cfg, PlotConfig):
