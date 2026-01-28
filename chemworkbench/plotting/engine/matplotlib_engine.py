@@ -1,36 +1,63 @@
 """
-chemworkbench/plotting/engine/matplotlib_engine.py
+Matplotlib Plotting Engine — ChemWorkBench v2.2
+===============================================
 
-Matplotlib-based renderer for ChemWorkBench v2.
-This implementation is intentionally minimal so that the pipeline
-and tests can run without requiring a full plotting subsystem.
+LLM‑friendly commentary
+-----------------------
+This module implements the canonical Matplotlib-based rendering engine
+for ChemWorkBench v2.2. It consumes PlotConfig objects produced by
+processors and returns backend-rendered figure payloads suitable for
+tests, UI layers, or downstream services.
+
+Responsibilities:
+- render a single PlotConfig deterministically
+- support universal x/y plotting
+- support optional multi-layer rendering
+- return a backend-agnostic figure payload
+
+Non‑responsibilities:
+- constructing PlotConfig objects (handled by processors)
+- orchestrating plot rendering (handled by PlottingService)
+- scientific interpretation (handled by processors)
 """
 
 from __future__ import annotations
-from typing import Any, Dict, List, Optional
+
+from typing import Any, Dict, List
 
 import matplotlib.pyplot as plt
 
 from chemworkbench.core.models import PlotConfig
 
 
+# ======================================================================
+# Matplotlib Rendering Engine (v2.2)
+# ======================================================================
+
 class MatplotlibEngine:
     """
-    Minimal Matplotlib renderer for PlotConfig objects.
+    Minimal, deterministic Matplotlib renderer for PlotConfig objects.
     """
 
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
     @staticmethod
     def render(plot: PlotConfig) -> Dict[str, Any]:
         """
         Render a single PlotConfig using Matplotlib.
 
-        Returns a dictionary containing the figure and axes so that
-        tests and downstream code can inspect the result.
+        Returns:
+            A dictionary containing:
+                - "figure": Matplotlib Figure
+                - "axes": Matplotlib Axes
+                - "metadata": plot metadata (unchanged)
         """
-
         fig, ax = plt.subplots()
 
-        # Basic XY plot
+        # --------------------------------------------------------------
+        # Primary XY plot
+        # --------------------------------------------------------------
         if plot.x is not None and plot.y is not None:
             ax.plot(
                 plot.x,
@@ -38,11 +65,15 @@ class MatplotlibEngine:
                 **plot.style,
             )
 
-        # Apply title
+        # --------------------------------------------------------------
+        # Title
+        # --------------------------------------------------------------
         if plot.title:
             ax.set_title(plot.title)
 
-        # Apply metadata-driven layers (optional)
+        # --------------------------------------------------------------
+        # Optional multi-layer rendering
+        # --------------------------------------------------------------
         layers = plot.metadata.get("layers", [])
         for layer in layers:
             MatplotlibEngine._render_layer(ax, layer)
@@ -53,12 +84,24 @@ class MatplotlibEngine:
             "metadata": plot.metadata,
         }
 
+    # ------------------------------------------------------------------
+    # Internal layer renderer
+    # ------------------------------------------------------------------
     @staticmethod
     def _render_layer(ax, layer: Dict[str, Any]):
         """
         Render a single layer from metadata.
-        """
 
+        Expected layer structure:
+            {
+                "plot_type": "line" | "scatter",
+                "x": [...],
+                "y": [...],
+                "color": "...",
+                "linewidth": float,
+                "alpha": float,
+            }
+        """
         x = layer.get("x")
         y = layer.get("y")
         if x is None or y is None:
@@ -74,6 +117,7 @@ class MatplotlibEngine:
                 linewidth=layer.get("linewidth", 1.0),
                 alpha=layer.get("alpha", 1.0),
             )
+
         elif plot_type == "scatter":
             ax.scatter(
                 x,
@@ -81,8 +125,12 @@ class MatplotlibEngine:
                 color=layer.get("color"),
                 alpha=layer.get("alpha", 1.0),
             )
-        # Additional plot types can be added here
 
+        # Additional plot types can be added here as needed.
+
+    # ------------------------------------------------------------------
+    # Convenience: render multiple plots
+    # ------------------------------------------------------------------
     @staticmethod
     def render_all(plots: List[PlotConfig]) -> List[Any]:
         """
