@@ -127,6 +127,11 @@ class Pipeline:
         logger.debug(f"Loaded raw data bundle: {raw_bundle}")
 
         # --------------------------------------------------------------
+        # Inject technique from sniffer (single source of truth)
+        # --------------------------------------------------------------
+        raw_bundle.technique = fmt.technique
+
+        # --------------------------------------------------------------
         # 4. Resolve processor
         # --------------------------------------------------------------
         processor_cls = get_processor_for_technique(fmt.technique)
@@ -148,7 +153,6 @@ class Pipeline:
         # 5. Processor pipeline (universal data flow)
         # --------------------------------------------------------------
         try:
-            # Pass ONLY the universal data payload, not the RawDataBundle wrapper
             validated = processor.validate(raw_bundle.data, config)
             preprocessed = processor.preprocess(validated, config)
             processed = processor.process(preprocessed, config)
@@ -169,8 +173,6 @@ class Pipeline:
         # 7. Plot generation
         # --------------------------------------------------------------
         try:
-            # v2.2 convention: processors decide what to plot and expose
-            # a plot configuration or data structure in postprocessed.
             plot_payload = postprocessed.get("plots", [])
             plots = self.plotting_service.render(plot_payload)
         except Exception as exc:
