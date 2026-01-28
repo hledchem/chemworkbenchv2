@@ -35,15 +35,14 @@ Non‑responsibilities:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from chemworkbench.core.models import (
     RawDataBundle,
-    ProcessedData,
     PipelineResult,
     DetectedFormat,
 )
 from chemworkbench.utils.file_sniffer.file_sniffer import sniff_file
+    # universal loader selection
 from chemworkbench.utils.loaders.registry import select_loader_for_path
 from chemworkbench.core.routing import get_processor_for_technique
 
@@ -112,11 +111,11 @@ class Pipeline:
         # 3. Load raw data
         # --------------------------------------------------------------
         try:
-            raw_data = loader.load(path)
+            raw_bundle: RawDataBundle = loader.load(path)
         except Exception as exc:
             raise PipelineError(f"Loader failed: {exc}") from exc
 
-        logger.debug(f"Loaded raw data: {raw_data}")
+        logger.debug(f"Loaded raw data: {raw_bundle}")
 
         # --------------------------------------------------------------
         # 4. Resolve processor
@@ -129,21 +128,24 @@ class Pipeline:
         logger.info(f"Using processor: {processor_cls.__name__}")
 
         # --------------------------------------------------------------
-        # 5. Processor pipeline
+        # 5. Processor pipeline (corrected universal data flow)
         # --------------------------------------------------------------
+        config = processor.config if hasattr(processor, "config") else processor_cls.config
+
         try:
-            validated = processor.validate(raw_data, processor.config if hasattr(processor, "config") else processor_cls.config)
-            preprocessed = processor.preprocess(validated, processor.config if hasattr(processor, "config") else processor_cls.config)
-            processed = processor.process(preprocessed, processor.config if hasattr(processor, "config") else processor_cls.config)
-            postprocessed = processor.postprocess(processed, processor.config if hasattr(processor, "config") else processor_cls.config)
+            # Pass ONLY the universal list‑of‑dicts, not the RawDataBundle wrapper
+            validated = processor.validate(raw_bundle.data, config)
+            preprocessed = processor.preprocess(validated, config)
+            processed = processor.process(preprocessed, config)
+            postprocessed = processor.postprocess(processed, config)
         except Exception as exc:
             raise PipelineError(f"Processor failed: {exc}") from exc
 
         # --------------------------------------------------------------
         # 6. Metadata + QC
         # --------------------------------------------------------------
-        metadata = processor.build_metadata(postprocessed, processor.config if hasattr(processor, "config") else processor_cls.config)
-        qc = processor.compute_qc(postprocessed, processor.config if hasattr(processor, "config") else processor_cls.config)
+        metadata = processor.build_metadata(postprocessed, config)
+        qc = processor.compute_qc(postprocessed, config)
 
         # --------------------------------------------------------------
         # 7. Plot generation
@@ -159,11 +161,11 @@ class Pipeline:
         # 8. Assemble result
         # --------------------------------------------------------------
         result = PipelineResult(
-            raw=raw_data,
+            raw=raw_bundle,
             processed=postprocessed,
-            plots=plots,
             metadata=metadata,
             qc=qc,
+            plots=plots,
         )
 
         logger.info("Pipeline completed successfully")
