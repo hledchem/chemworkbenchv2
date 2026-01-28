@@ -2,28 +2,22 @@
 # ChemWorkBench v2.1 — pyproject.toml
 # =====================================================================
 # This file defines the build system, dependencies, and metadata for
-# ChemWorkBench v2.1. It is written in a Poetry‑native, PEP 621‑compliant
-# format. The structure is intentionally LLM‑friendly:
+# ChemWorkBench v2.1. It is written in a Poetry‑native, PEP 621‑aligned
+# format with extensive commentary for future maintainers and AI agents.
 #
-# - Clear section boundaries
-# - High‑signal commentary explaining architectural intent
-# - Explicit grouping of runtime vs. development dependencies
-# - Plugin‑ready packaging configuration
-#
-# Future AI agents should treat this file as the canonical source of
-# truth for dependency resolution, packaging, and environment creation.
+# Architectural goals:
+# - Deterministic builds
+# - Plugin‑ready packaging
+# - Clean separation of runtime vs. dev dependencies
+# - LLM‑safe structure with explicit intent
 # =====================================================================
 
 
 # =====================================================================
 # [tool.poetry]
 # ---------------------------------------------------------------------
-# Poetry’s primary configuration block.
-# This replaces the older setuptools‑based configuration and ensures:
-# - deterministic builds
-# - reproducible environments
-# - clean dependency resolution
-# - plugin‑friendly packaging
+# Core project metadata used by Poetry for packaging and environment
+# management. This replaces setuptools entirely.
 # =====================================================================
 [tool.poetry]
 name = "chemworkbench"
@@ -34,9 +28,17 @@ readme = "README.md"
 license = "MIT"
 
 # Poetry needs to know which Python packages to include.
-# We explicitly include the chemworkbench/ directory.
 packages = [
     { include = "chemworkbench" }
+]
+
+# Poetry expects "include" to be a flat array, not a table.
+# These patterns ensure that JSON/YAML config files, anchor libraries,
+# and plugin metadata are included in the final wheel.
+include = [
+    "chemworkbench/**/*.json",
+    "chemworkbench/**/*.yaml",
+    "chemworkbench/**/*.yml"
 ]
 
 
@@ -44,12 +46,7 @@ packages = [
 # [tool.poetry.dependencies]
 # ---------------------------------------------------------------------
 # Runtime dependencies required for ChemWorkBench to function.
-# These are intentionally minimal and scientific‑stack focused.
-#
-# LLM NOTE:
-# - Do NOT add dev tools here (pytest, black, ruff, etc.)
-# - Do NOT add optional plugins here
-# - Keep this list clean and stable
+# Keep this list minimal and stable.
 # =====================================================================
 [tool.poetry.dependencies]
 python = ">=3.10"
@@ -63,13 +60,12 @@ scipy = ">=1.11"
 # [tool.poetry.group.dev.dependencies]
 # ---------------------------------------------------------------------
 # Development‑only dependencies.
-# These are NOT installed by default unless the user runs:
-#
+# These are installed via:
 #     poetry install --with dev
 #
 # LLM NOTE:
-# - This is the correct place for testing, linting, formatting tools.
-# - Do NOT move these into the main dependency list.
+# - Do NOT move these into main dependencies.
+# - This group is intentionally isolated.
 # =====================================================================
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.0"
@@ -79,36 +75,10 @@ ruff = "*"
 
 
 # =====================================================================
-# [tool.poetry.include]
-# ---------------------------------------------------------------------
-# Include non‑Python files inside the package distribution.
-# This is essential for:
-# - anchor libraries
-# - plugin metadata
-# - YAML/JSON configs
-# - templates
-#
-# LLM NOTE:
-# - If you add new config formats, extend this list.
-# - Keep patterns broad but safe.
-# =====================================================================
-[tool.poetry.include]
-files = [
-    "chemworkbench/**/*.json",
-    "chemworkbench/**/*.yaml",
-    "chemworkbench/**/*.yml"
-]
-
-
-# =====================================================================
 # [build-system]
 # ---------------------------------------------------------------------
-# Poetry uses poetry-core as its backend.
-# This is the modern, lightweight, PEP 517‑compliant build system.
-#
-# LLM NOTE:
-# - Do NOT switch back to setuptools unless absolutely necessary.
-# - poetry-core ensures reproducible builds and clean packaging.
+# Poetry uses poetry-core as its backend. This is the modern,
+# lightweight, PEP 517‑compliant build system.
 # =====================================================================
 [build-system]
 requires = ["poetry-core>=1.8.0"]
