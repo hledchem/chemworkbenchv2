@@ -1,12 +1,30 @@
+"""
+Loader Registry — ChemWorkBench v2.2
+====================================
+
+LLM‑friendly commentary
+-----------------------
+This module provides the canonical registry of all loader classes.
+
+In v2.2, loader selection is *format‑based*, not technique‑based.
+Loaders are responsible only for reading file formats, not detecting
+technique or vendor.
+
+Public API:
+- iter_loader_classes()
+- select_loader_for_path(path)
+"""
+
 from __future__ import annotations
 
-from typing import Dict, Tuple, Type
+from typing import Dict, Tuple, Type, List, Optional
+from pathlib import Path
 
 from .base_loader import BaseVendorLoader
 
-# -------------------------
+# ---------------------------------------------------------
 # Import all loaders
-# -------------------------
+# ---------------------------------------------------------
 
 # Agilent
 from .agilent.agilent_d_chrom_loader import AgilentDChromLoader
@@ -31,7 +49,7 @@ from .jeol.jeol_jdf_loader import JEOLJDFLoader
 
 # PerkinElmer
 from .perkinelmer.perkinelmer_sp_loader import PerkinElmerSPLoader
-from .perkinelmer.perkinelmer_spc_loader import PerkinElmerSPCLoader
+from .perkinelmer.perkinelmer_spc_loader import PerkinelmerSPCLoader
 
 # Raman
 from .raman.dpt_loader import DPTLoader
@@ -62,103 +80,85 @@ from .xlsx_loader import XLSXLoader
 
 
 # ---------------------------------------------------------
-# Canonical registry: (vendor, format) → loader class
+# Canonical list of loader classes
 # ---------------------------------------------------------
 
-LOADER_REGISTRY: Dict[Tuple[str, str], Type[BaseVendorLoader]] = {
-    # -------------------------
+LOADER_CLASSES: List[Type[BaseVendorLoader]] = [
     # Agilent
-    # -------------------------
-    ("agilent", "d_chrom"): AgilentDChromLoader,
-    ("agilent", "d_ms"): AgilentDMSLoader,
-    ("agilent", "d_uvvis"): AgilentDUVVisLoader,
-    ("agilent", "sp"): AgilentSPLoader,
-    ("agilent", "uv"): AgilentUVLoader,
+    AgilentDChromLoader,
+    AgilentDMSLoader,
+    AgilentDUVVisLoader,
+    AgilentSPLoader,
+    AgilentUVLoader,
 
-    # -------------------------
     # Bruker
-    # -------------------------
-    ("bruker", "epr"): BrukerEPRLoader,
-    ("bruker", "nmr"): BrukerNMRLoader,
-    ("bruker", "opus"): BrukerOPUSLoader,
+    BrukerNMRLoader,
+    BrukerOPUSLoader,
+    BrukerEPRLoader,
 
-    # -------------------------
     # CH Instruments
-    # -------------------------
-    ("ch_instruments", "dta"): CHIDTALoader,
+    CHIDTALoader,
 
-    # -------------------------
     # Horiba
-    # -------------------------
-    ("horiba", "fluor"): HoribaFluorescenceLoader,
+    HoribaFluorescenceLoader,
 
-    # -------------------------
     # JEOL
-    # -------------------------
-    ("jeol", "jdf"): JEOLJDFLoader,
+    JEOLJDFLoader,
 
-    # -------------------------
     # PerkinElmer
-    # -------------------------
-    ("perkinelmer", "sp"): PerkinElmerSPLoader,
-    ("perkinelmer", "spc"): PerkinElmerSPCLoader,
+    PerkinElmerSPLoader,
+    PerkinelmerSPCLoader,
 
-    # -------------------------
     # Raman
-    # -------------------------
-    ("raman", "dpt"): DPTLoader,
-    ("raman", "rruf"): RRUFFLoader,
-    ("raman", "rruf_gz"): RRUFFGZLoader,
+    DPTLoader,
+    RRUFFLoader,
+    RRUFFGZLoader,
 
-    # -------------------------
     # Shimadzu
-    # -------------------------
-    ("shimadzu", "irx"): ShimadzuIRXLoader,
-    ("shimadzu", "lcd"): ShimadzuLCDLoader,
-    ("shimadzu", "spc"): ShimadzuSPCLoader,
-    ("shimadzu", "uvs"): ShimadzuUVSLoader,
+    ShimadzuIRXLoader,
+    ShimadzuLCDLoader,
+    ShimadzuSPCLoader,
+    ShimadzuUVSLoader,
 
-    # -------------------------
     # Thermo
-    # -------------------------
-    ("thermo", "spa"): ThermoSPALoader,
-    ("thermo", "spc"): ThermoSPCLoader,
-    ("thermo", "srs"): ThermoSRSLoader,
+    ThermoSPALoader,
+    ThermoSPCLoader,
+    ThermoSRSLoader,
 
-    # -------------------------
     # Varian
-    # -------------------------
-    ("varian", "nmr"): VarianNMRLoader,
+    VarianNMRLoader,
 
-    # -------------------------
     # Waters
-    # -------------------------
-    ("waters", "raw"): WatersRAWLoader,
+    WatersRAWLoader,
 
-    # -------------------------
     # Universal
-    # -------------------------
-    ("universal", "csv"): CSVLoader,
-    ("universal", "jcamp"): JCAMPLoader,
-    ("universal", "xlsx"): XLSXLoader,
-}
+    CSVLoader,
+    JCAMPLoader,
+    XLSXLoader,
+]
 
 
 # ---------------------------------------------------------
-# Helper functions
+# Public API
 # ---------------------------------------------------------
 
-def get_loader(vendor: str, fmt: str) -> Type[BaseVendorLoader]:
-    key = (vendor.lower(), fmt.lower())
-    if key not in LOADER_REGISTRY:
-        raise KeyError(f"No loader registered for vendor='{vendor}', format='{fmt}'")
-    return LOADER_REGISTRY[key]
+def iter_loader_classes():
+    """Yield all loader classes."""
+    for cls in LOADER_CLASSES:
+        yield cls
 
 
-def all_loaders() -> Dict[Tuple[str, str], Type[BaseVendorLoader]]:
-    return dict(LOADER_REGISTRY)
+def select_loader_for_path(path: str | Path) -> Optional[Type[BaseVendorLoader]]:
+    """
+    Return the first loader class whose sniff() method claims the file.
+    """
+    path = Path(path)
 
+    for cls in LOADER_CLASSES:
+        try:
+            if cls().sniff(path):
+                return cls
+        except Exception:
+            continue  # Loaders must never break detection
 
-def iter_loaders():
-    for cls in LOADER_REGISTRY.values():
-        yield cls()
+    return None
