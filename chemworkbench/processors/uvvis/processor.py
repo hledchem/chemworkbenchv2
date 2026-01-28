@@ -1,3 +1,28 @@
+"""
+UV‑Vis Processor — ChemWorkBench v2.2
+=====================================
+
+LLM‑friendly commentary
+-----------------------
+This module implements the canonical UV‑Vis processor for ChemWorkBench v2.2.
+It consumes the universal loader output (list‑of‑dicts with {"x": float, "y": float})
+and performs the full spectral processing pipeline:
+
+Responsibilities:
+- accept universal list‑of‑dicts loader output
+- validate and extract x/y arrays
+- perform baseline correction, smoothing, and normalization
+- detect peaks and integrate spectral regions
+- compute QC metrics
+- build metadata for downstream consumers
+
+Non‑responsibilities:
+- file reading (handled by loaders)
+- technique detection (handled by the anchor engine)
+- loader selection (handled by the loader registry)
+- processor routing (handled by core.routing)
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -20,9 +45,9 @@ from chemworkbench.utils.math_spectral import (
 from .config import UVVisConfig
 
 
-# -------------------------------------------------------------------------
-# Minimal internal stubs for QC + Plot layers (v2.1 placeholder)
-# -------------------------------------------------------------------------
+# ======================================================================
+# QC + Plot Layer Stubs (v2.2 placeholder)
+# ======================================================================
 
 @dataclass
 class QCMetric:
@@ -47,24 +72,32 @@ class PlotType:
     LINE = "line"
 
 
-# -------------------------------------------------------------------------
-# UV-Vis Processor
-# -------------------------------------------------------------------------
+# ======================================================================
+# UV‑Vis Processor (v2.2)
+# ======================================================================
 
 class UVVisProcessor:
-    """UV-Vis processor implementing the universal processor protocol."""
+    """
+    Canonical UV‑Vis processor for ChemWorkBench v2.2.
+
+    This processor is designed to be:
+    - deterministic
+    - plugin‑safe
+    - LLM‑friendly
+    - compatible with universal loader output
+    """
 
     name: str
     version: str
     technique: Technique = Technique.UVVIS
 
-    def __init__(self, name: str = "uvvis_processor", version: str = "1.0.0") -> None:
+    def __init__(self, name: str = "uvvis_processor", version: str = "2.2.0") -> None:
         self.name = name
         self.version = version
 
-    # ---------------------------------------------------------------------
+    # ==================================================================
     # Core processing step
-    # ---------------------------------------------------------------------
+    # ==================================================================
     def process(self, data: Any, config: BaseProcessorConfig) -> Any:
         if not isinstance(config, UVVisConfig):
             raise TypeError("UVVisProcessor requires a UVVisConfig instance.")
@@ -75,7 +108,9 @@ class UVVisProcessor:
         x_arr = np.asarray(data["x"], dtype=float)
         y_arr = np.asarray(data["y"], dtype=float)
 
+        # --------------------------------------------------------------
         # Peak detection
+        # --------------------------------------------------------------
         peak_results_dict: Optional[Dict[str, Any]] = None
         if config.detect_peaks:
             method = config.peak_method.lower()
@@ -95,7 +130,9 @@ class UVVisProcessor:
             )
             peak_results_dict = self._peak_result_to_dict(peaks_result)
 
+        # --------------------------------------------------------------
         # Integration
+        # --------------------------------------------------------------
         integration_results: Dict[str, float] = {}
         if config.integration_regions:
             areas = integrate_regions(x_arr, y_arr, config.integration_regions)
@@ -109,24 +146,28 @@ class UVVisProcessor:
 
         return processed_payload
 
-    # ---------------------------------------------------------------------
+    # ==================================================================
     # Pipeline hooks
-    # ---------------------------------------------------------------------
+    # ==================================================================
     def load(self, data: Any, config: BaseProcessorConfig) -> Any:
         return data
 
     def validate(self, data: Any, config: BaseProcessorConfig) -> Any:
         x_arr, y_arr = self._extract_xy(data)
         if x_arr.size == 0 or y_arr.size == 0:
-            raise ValueError("UV-Vis data must contain non-empty x and y arrays.")
+            raise ValueError("UV‑Vis data must contain non‑empty x and y arrays.")
         if x_arr.shape != y_arr.shape:
-            raise ValueError("UV-Vis x and y arrays must have the same shape.")
+            raise ValueError("UV‑Vis x and y arrays must have the same shape.")
         return {"x_raw": x_arr, "y_raw": y_arr}
 
     def preprocess(self, data: Any, config: BaseProcessorConfig) -> Any:
         if not isinstance(config, UVVisConfig):
             raise TypeError("UVVisProcessor requires a UVVisConfig instance.")
 
+        # Accept:
+        # - {"x_raw": ..., "y_raw": ...}
+        # - universal list‑of‑dicts
+        # - {"x": [...], "y": [...]}
         if isinstance(data, dict) and "x_raw" in data:
             x_arr = np.asarray(data["x_raw"], dtype=float)
             y_arr = np.asarray(data["y_raw"], dtype=float)
@@ -135,7 +176,9 @@ class UVVisProcessor:
 
         y_raw = y_arr.copy()
 
-        # Baseline
+        # --------------------------------------------------------------
+        # Baseline correction
+        # --------------------------------------------------------------
         baseline_kwargs: Dict[str, Any] = {}
         if config.baseline_method == "polynomial":
             baseline_kwargs["order"] = config.baseline_order
@@ -155,7 +198,9 @@ class UVVisProcessor:
         )
         y_corrected = y_arr - baseline_arr
 
+        # --------------------------------------------------------------
         # Smoothing
+        # --------------------------------------------------------------
         smooth_kwargs: Dict[str, Any] = {}
         if config.smoothing_method == "moving_average":
             smooth_kwargs["window"] = config.smoothing_window
@@ -172,7 +217,9 @@ class UVVisProcessor:
             **smooth_kwargs,
         )
 
+        # --------------------------------------------------------------
         # Normalization
+        # --------------------------------------------------------------
         _, y_norm = normalize(
             x_arr,
             y_smooth,
@@ -192,6 +239,9 @@ class UVVisProcessor:
     def postprocess(self, data: Any, config: BaseProcessorConfig) -> Any:
         return data
 
+    # ==================================================================
+    # Metadata + QC
+    # ==================================================================
     def build_metadata(self, data: Any, config: BaseProcessorConfig) -> Dict[str, Any]:
         if isinstance(data, dict) and "x" in data:
             x_arr = np.asarray(data["x"], dtype=float)
@@ -230,23 +280,38 @@ class UVVisProcessor:
             qc["rms_signal"] = QCMetric(
                 name="rms_signal",
                 value=rms,
-                description="Root-mean-square of the signal.",
+                description="Root‑mean‑square of the signal.",
             )
 
         return qc
 
-    # ---------------------------------------------------------------------
+    # ==================================================================
     # Helpers
-    # ---------------------------------------------------------------------
+    # ==================================================================
     def _extract_xy(self, data: Any) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Extract x/y arrays from either:
+        - universal list‑of‑dicts format: [{"x": float, "y": float}, ...]
+        - legacy dict format: {"x": [...], "y": [...]}
+        """
+        # v2.2 universal format
+        if isinstance(data, list):
+            try:
+                x_vals = [float(row["x"]) for row in data]
+                y_vals = [float(row["y"]) for row in data]
+                return np.asarray(x_vals), np.asarray(y_vals)
+            except Exception:
+                raise TypeError("List input must contain dicts with 'x' and 'y' keys.")
+
+        # Legacy dict format
         if isinstance(data, dict) and "x" in data and "y" in data:
             return np.asarray(data["x"], dtype=float), np.asarray(data["y"], dtype=float)
-        raise TypeError("Data must contain 'x' and 'y' arrays.")
+
+        raise TypeError("Data must contain 'x' and 'y' arrays or list‑of‑dicts with x/y.")
 
     def _peak_result_to_dict(self, peaks_result: Any) -> Dict[str, Any]:
         """
         Convert PeakDetectionResult into a simple dict for downstream use.
-        This is v2.1-native: we just expose whatever attributes the result has.
         """
         if peaks_result is None:
             return {}
