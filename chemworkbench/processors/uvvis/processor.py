@@ -87,13 +87,13 @@ class UVVisProcessor:
     - compatible with universal loader output
     """
 
-    name: str
-    version: str
     technique: Technique = Technique.UVVIS
 
     def __init__(self, name: str = "uvvis_processor", version: str = "2.2.0") -> None:
+        # v2.2 rule: processors MUST define instance‑level config
         self.name = name
         self.version = version
+        self.config: UVVisConfig = UVVisConfig()
 
     # ==================================================================
     # Core processing step
@@ -237,6 +237,7 @@ class UVVisProcessor:
         }
 
     def postprocess(self, data: Any, config: BaseProcessorConfig) -> Any:
+        # v2.2: processors decide what to plot; expose via "plots" key if needed
         return data
 
     # ==================================================================
@@ -290,36 +291,35 @@ class UVVisProcessor:
     # ==================================================================
     def _extract_xy(self, data: Any) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Extract x/y arrays from either:
-        - universal list‑of‑dicts format: [{"x": float, "y": float}, ...]
-        - legacy dict format: {"x": [...], "y": [...]}
+        Accepts:
+            - universal list‑of‑dicts with keys "x" and "y"
+            - dict with "x" and "y" lists/arrays
+        Returns:
+            (x_arr, y_arr)
         """
-        # v2.2 universal format
-        if isinstance(data, list):
-            try:
-                x_vals = [float(row["x"]) for row in data]
-                y_vals = [float(row["y"]) for row in data]
-                return np.asarray(x_vals), np.asarray(y_vals)
-            except Exception:
-                raise TypeError("List input must contain dicts with 'x' and 'y' keys.")
-
-        # Legacy dict format
         if isinstance(data, dict) and "x" in data and "y" in data:
-            return np.asarray(data["x"], dtype=float), np.asarray(data["y"], dtype=float)
+            x = np.asarray(data["x"], dtype=float)
+            y = np.asarray(data["y"], dtype=float)
+            return x, y
 
-        raise TypeError("Data must contain 'x' and 'y' arrays or list‑of‑dicts with x/y.")
+        if isinstance(data, list) and data and isinstance(data[0], dict):
+            x = np.asarray([row["x"] for row in data], dtype=float)
+            y = np.asarray([row["y"] for row in data], dtype=float)
+            return x, y
+
+        raise TypeError("Cannot extract x/y from provided UV‑Vis data structure.")
 
     def _peak_result_to_dict(self, peaks_result: Any) -> Dict[str, Any]:
         """
-        Convert PeakDetectionResult into a simple dict for downstream use.
+        Convert peak detection result into a JSON‑serializable dict.
         """
         if peaks_result is None:
             return {}
 
         out: Dict[str, Any] = {}
-        for attr in ("indices", "x", "y", "prominence", "width", "refined_x", "refined_y"):
-            if hasattr(peaks_result, attr):
-                value = getattr(peaks_result, attr)
-                out[attr] = value.tolist() if hasattr(value, "tolist") else value
+        for key in ("indices", "x", "y", "prominences", "widths"):
+            val = getattr(peaks_result, key, None)
+            if val is not None:
+                out[key] = [float(v) for v in val]
 
         return out
