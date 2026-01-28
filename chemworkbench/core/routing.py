@@ -39,12 +39,21 @@ from chemworkbench.processors.uvvis.processor import UVVisProcessor
 # from chemworkbench.processors.lcms.processor import LCMSProcessor
 
 
+# ======================================================================
+# Technique Router (v2.2)
+# ======================================================================
+
 class TechniqueRouter:
     """
     Central router mapping Technique → ProcessorClass.
+
+    Rules:
+        - Built‑ins define the default mapping.
+        - Plugins may override built‑ins.
+        - Resolution is deterministic: plugin > built‑in > None.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._routes: Dict[Technique, Type[BaseProcessor]] = {}
         self._plugins: Dict[Technique, Type[BaseProcessor]] = {}
         self._register_builtin_routes()
@@ -53,11 +62,11 @@ class TechniqueRouter:
     # Registration
     # ------------------------------------------------------------------
 
-    def register(self, technique: Technique, processor_cls: Type[BaseProcessor]):
+    def register(self, technique: Technique, processor_cls: Type[BaseProcessor]) -> None:
         """Register a built‑in processor."""
         self._routes[technique] = processor_cls
 
-    def register_plugin(self, technique: Technique, processor_cls: Type[BaseProcessor]):
+    def register_plugin(self, technique: Technique, processor_cls: Type[BaseProcessor]) -> None:
         """Register a plugin processor (overrides built‑ins)."""
         self._plugins[technique] = processor_cls
 
@@ -65,7 +74,7 @@ class TechniqueRouter:
     # Built‑in technique → processor mappings
     # ------------------------------------------------------------------
 
-    def _register_builtin_routes(self):
+    def _register_builtin_routes(self) -> None:
         self.register(Technique.UVVIS, UVVisProcessor)
         # Enable these as processors are implemented:
         # self.register(Technique.IR, IRProcessor)
@@ -86,18 +95,21 @@ class TechniqueRouter:
         Resolve a processor class for a given technique.
         Plugin processors override built‑ins.
         """
+        # 1. Plugin override
         if technique in self._plugins:
             return self._plugins[technique]
 
+        # 2. Built‑in mapping
         if technique in self._routes:
             return self._routes[technique]
 
+        # 3. No processor available
         return None
 
 
-# ----------------------------------------------------------------------
+# ======================================================================
 # Singleton instance + convenience function
-# ----------------------------------------------------------------------
+# ======================================================================
 
 technique_router = TechniqueRouter()
 
