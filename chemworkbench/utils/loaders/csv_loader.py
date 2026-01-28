@@ -1,23 +1,23 @@
 """
-CSVLoader (v2.2)
-================
+CSV Loader — ChemWorkBench v2.2
+===============================
 
-This loader implements the v2.2 ChemWorkBench ingestion architecture.
+LLM‑friendly commentary
+-----------------------
+This loader implements the canonical v2.2 ingestion architecture for CSV
+files. In v2.2, loaders are *format readers only*. They do not:
 
-LLM‑friendly commentary:
-------------------------
-Loaders in v2.2 are *format readers only*. They do NOT:
-- detect technique
-- classify vendor
-- interpret scientific meaning
-- normalize tokens
-- perform anchor scoring
+    - detect technique
+    - classify vendor
+    - interpret scientific meaning
+    - normalize tokens
+    - perform anchor scoring
 
 All detection and classification happens *before* loaders run.
 
-This loader simply converts a CSV file into a universal Python structure
-(list-of-dicts), which processors can interpret after the anchor engine
-has selected the correct technique.
+The CSV loader simply reads a CSV file into a universal Python structure
+(list‑of‑dicts). Processors interpret the meaning of the data after the
+anchor engine has selected the correct technique.
 
 This file is intentionally small, deterministic, and easy for both humans
 and LLMs to maintain.
@@ -29,7 +29,7 @@ import csv
 from pathlib import Path
 from typing import Any, Mapping
 
-from .base_loader import (
+from chemworkbench.utils.loaders.base_loader import (
     BaseVendorLoader,
     LoaderReadError,
     LoaderMetadataError,
@@ -37,23 +37,22 @@ from .base_loader import (
 )
 
 
+# ======================================================================
+# CSV Loader (v2.2)
+# ======================================================================
+
 class CSVLoader(BaseVendorLoader):
     """
-    CSVLoader (v2.2)
+    Universal CSV loader for ChemWorkBench v2.2.
 
-    A universal CSV format loader. This loader is intentionally
-    technique‑agnostic and vendor‑agnostic. It reads CSV files into a
-    list‑of‑dicts structure, leaving all scientific interpretation to
-    processors.
-
-    Responsibilities (v2.2):
+    Responsibilities:
     - Read CSV files safely and deterministically
-    - Produce a universal structure (list-of-dicts)
+    - Produce a universal structure (list‑of‑dicts)
     - Extract minimal structural metadata
     - Raise structured loader errors
 
     Non‑responsibilities:
-    - Technique detection (handled by anchor engine)
+    - Technique detection (anchor engine)
     - Vendor detection
     - Scientific interpretation
     - Token normalization
@@ -66,8 +65,7 @@ class CSVLoader(BaseVendorLoader):
     # ------------------------------------------------------------------
     # sniff(path)
     # ------------------------------------------------------------------
-    # v2.2 rule: sniffing is *format-only*. Loaders do not sniff technique.
-    # This loader claims only .csv files.
+    # v2.2 rule: sniffing is *format‑only*. Loaders do not sniff technique.
     # ------------------------------------------------------------------
     def sniff(self, path: Path) -> bool:
         path = Path(path)
@@ -76,11 +74,10 @@ class CSVLoader(BaseVendorLoader):
     # ------------------------------------------------------------------
     # load_raw(path)
     # ------------------------------------------------------------------
-    # Reads the CSV file and returns a list-of-dicts.
-    # This is the only I/O-heavy part of the loader.
+    # Reads the CSV file and returns a list‑of‑dicts.
+    # This is the only I/O‑heavy part of the loader.
     # ------------------------------------------------------------------
     def load_raw(self, path: Path) -> Any:
-        path = Path(path)
         try:
             with path.open("r", newline="", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
@@ -112,7 +109,7 @@ class CSVLoader(BaseVendorLoader):
     # to_universal(raw_data, metadata)
     # ------------------------------------------------------------------
     # v2.2 rule: loaders output a universal structure that processors
-    # can interpret. For CSV, this is simply the list-of-dicts.
+    # can interpret. For CSV, this is simply the list‑of‑dicts.
     # ------------------------------------------------------------------
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
