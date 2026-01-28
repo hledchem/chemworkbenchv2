@@ -107,7 +107,7 @@ LOADER_CLASSES: List[Type[BaseVendorLoader]] = [
 
     # PerkinElmer
     PerkinElmerSPLoader,
-    PerkinelmerSPCLoader,
+    PerkinElmerSPCLoader,
 
     # Raman
     DPTLoader,
