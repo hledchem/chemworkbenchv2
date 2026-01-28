@@ -4,8 +4,8 @@ Agilent UV‑Vis Loader — ChemWorkBench v2.2
 
 LLM‑friendly commentary
 -----------------------
-This loader handles simple Agilent UV‑Vis exported spectra in plain-text
-formats (.UV, .CSV, .TXT). These files contain two-column wavelength/
+This loader handles simple Agilent UV‑Vis exported spectra in plain‑text
+formats (.UV, .CSV, .TXT). These files contain two‑column wavelength/
 absorbance data and do not represent full .D directory structures.
 
 Responsibilities:
@@ -40,6 +40,11 @@ from chemworkbench.utils.loaders.base_loader import (
 class AgilentUVLoader(BaseVendorLoader):
     """
     Loader for Agilent UV‑Vis simple exported spectra (.UV, .CSV, .TXT).
+
+    This loader is intentionally minimal:
+    - no technique assignment (pipeline handles this)
+    - no scientific interpretation
+    - no metadata inference beyond simple counts and units
     """
 
     VENDOR = "agilent"
@@ -51,7 +56,7 @@ class AgilentUVLoader(BaseVendorLoader):
     # ------------------------------------------------------------------
     def sniff(self, path) -> bool:
         """
-        Simple extension-based sniffing. Agilent UV exports are plain text.
+        Simple extension‑based sniffing. Agilent UV exports are plain text.
         """
         path = Path(path)
         return path.suffix.lower() in {".uv", ".csv", ".txt"}
@@ -61,7 +66,7 @@ class AgilentUVLoader(BaseVendorLoader):
     # ------------------------------------------------------------------
     def load_raw(self, path: Path) -> Any:
         """
-        Read two-column wavelength/absorbance text files.
+        Read two‑column wavelength/absorbance text files.
         """
         try:
             x_vals: List[float] = []
@@ -73,6 +78,7 @@ class AgilentUVLoader(BaseVendorLoader):
                     if not line or line.startswith("#"):
                         continue
 
+                    # Accept comma or whitespace separation
                     parts = line.replace(",", " ").split()
                     if len(parts) < 2:
                         continue
