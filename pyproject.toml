@@ -7,7 +7,7 @@
 #
 # Architectural goals:
 # - Deterministic builds
-# - Plugin‑ready packaging
+# - Plugin‑ready ingestion architecture
 # - Clean separation of runtime vs. dev dependencies
 # - LLM‑safe structure with explicit intent
 # =====================================================================
@@ -47,6 +47,10 @@ include = [
 # ---------------------------------------------------------------------
 # Runtime dependencies required for ChemWorkBench to function.
 # Keep this list minimal and stable.
+#
+# LLM NOTE:
+# - openpyxl is required for XLSXLoader
+# - If future loaders require pandas, xlrd, h5py, etc., add them here
 # =====================================================================
 [tool.poetry.dependencies]
 python = ">=3.10"
@@ -54,6 +58,7 @@ numpy = ">=1.26"
 pydantic = ">=2.0"
 matplotlib = ">=3.8"
 scipy = ">=1.11"
+openpyxl = ">=3.1"
 
 
 # =====================================================================
