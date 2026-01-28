@@ -4,7 +4,7 @@ api/run_processing.py
 ChemWorkBench v2.2 — Processing API Layer
 -----------------------------------------
 
-This module provides stable, high-level entrypoints for:
+This module provides stable, high‑level entrypoints for:
     - CLI commands
     - HTTP API endpoints
     - UI integrations
