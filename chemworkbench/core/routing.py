@@ -1,24 +1,34 @@
 """
-core/routing.py
+Technique → Processor Routing — ChemWorkBench v2.2
+==================================================
 
-Technique → Processor routing for ChemWorkBench v2.
+LLM‑friendly commentary
+-----------------------
+This module provides the canonical mapping from Technique → ProcessorClass.
 
-This module maps each analytical technique to the correct processor class.
-The pipeline uses this router after the loader returns a RawDataBundle.
+Responsibilities:
+- return the correct processor class for a detected Technique
+- allow plugin processors to override built‑ins
+- remain deterministic and simple
+
+Non‑responsibilities:
+- technique detection (handled by the anchor engine)
+- loader selection (handled by the loader registry)
+- file reading (handled by loaders)
+- scientific interpretation (handled by processors)
 """
 
 from __future__ import annotations
+
 from typing import Dict, Optional, Type
 
 from chemworkbench.core.models import Technique
-
-# Base processor
 from chemworkbench.processors.base_processor import BaseProcessor
 
-# Technique-specific processors
+# Built‑in processors
 from chemworkbench.processors.uvvis.processor import UVVisProcessor
 
-# Future processors (stubs or real implementations)
+# Future processors (enable when implemented)
 # from chemworkbench.processors.ir.processor import IRProcessor
 # from chemworkbench.processors.raman.processor import RamanProcessor
 # from chemworkbench.processors.nmr.processor import NMRProcessor
@@ -37,7 +47,6 @@ class TechniqueRouter:
     def __init__(self):
         self._routes: Dict[Technique, Type[BaseProcessor]] = {}
         self._plugins: Dict[Technique, Type[BaseProcessor]] = {}
-
         self._register_builtin_routes()
 
     # ------------------------------------------------------------------
@@ -45,22 +54,20 @@ class TechniqueRouter:
     # ------------------------------------------------------------------
 
     def register(self, technique: Technique, processor_cls: Type[BaseProcessor]):
-        """Register a processor for a technique."""
+        """Register a built‑in processor."""
         self._routes[technique] = processor_cls
 
     def register_plugin(self, technique: Technique, processor_cls: Type[BaseProcessor]):
-        """Register a plugin processor."""
+        """Register a plugin processor (overrides built‑ins)."""
         self._plugins[technique] = processor_cls
 
     # ------------------------------------------------------------------
-    # Built-in technique → processor mappings
+    # Built‑in technique → processor mappings
     # ------------------------------------------------------------------
 
     def _register_builtin_routes(self):
-        # UVVis
         self.register(Technique.UVVIS, UVVisProcessor)
-
-        # Future techniques (enable when implemented)
+        # Enable these as processors are implemented:
         # self.register(Technique.IR, IRProcessor)
         # self.register(Technique.RAMAN, RamanProcessor)
         # self.register(Technique.NMR, NMRProcessor)
@@ -77,22 +84,26 @@ class TechniqueRouter:
     def resolve_processor(self, technique: Technique) -> Optional[Type[BaseProcessor]]:
         """
         Resolve a processor class for a given technique.
+        Plugin processors override built‑ins.
         """
-
-        # 1. Built-in processors
-        if technique in self._routes:
-            return self._routes[technique]
-
-        # 2. Plugin processors
         if technique in self._plugins:
             return self._plugins[technique]
 
-        # 3. No processor available
+        if technique in self._routes:
+            return self._routes[technique]
+
         return None
 
 
 # ----------------------------------------------------------------------
-# Singleton instance
+# Singleton instance + convenience function
 # ----------------------------------------------------------------------
 
 technique_router = TechniqueRouter()
+
+
+def get_processor_for_technique(technique: Technique) -> Optional[Type[BaseProcessor]]:
+    """
+    Public v2.2 API for processor routing.
+    """
+    return technique_router.resolve_processor(technique)
