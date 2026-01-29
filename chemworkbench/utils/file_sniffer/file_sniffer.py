@@ -9,15 +9,15 @@ This module implements the v2.2 file‑sniffing orchestrator.
 It replaces the legacy 3‑tier detection system with a clean,
 deterministic pipeline:
 
-    normalize_file(path)
-        → detection_engine.score()
-        → select_loader_for_path()
-        → DetectedFormat
+    1. FormatDetectionEngine → format_id
+    2. Format Registry → loader_class
+    3. TechniqueDetectionEngine → technique
+    4. Construct DetectedFormat
 
 Responsibilities:
-- run normalization
+- run structural format detection
+- select the correct loader class via format registry
 - run technique scoring
-- select the correct loader class
 - return a DetectedFormat object
 
 Non‑responsibilities:
@@ -32,9 +32,30 @@ from pathlib import Path
 from typing import Optional
 
 from chemworkbench.core.models import Technique, DetectedFormat
-from chemworkbench.utils.normalization import normalize_file
-from chemworkbench.utils.file_sniffer.detection_engine import score as score_technique
-from chemworkbench.utils.loaders.registry import select_loader_for_path
+from chemworkbench.core.technique_detection_engine import score as score_technique
+
+from chemworkbench.utils.file_sniffer.format_detection_engine import FormatDetectionEngine
+from chemworkbench.utils.file_sniffer.format_registry import FORMAT_REGISTRY
+
+from chemworkbench.utils.file_sniffer.detectors.ascii.headered_csv_detector import HeaderedCSVDetector
+from chemworkbench.utils.file_sniffer.detectors.ascii.no_header_csv_detector import NoHeaderCSVDetector
+from chemworkbench.utils.file_sniffer.detectors.ascii.two_column_ascii_detector import TwoColumnAsciiDetector
+from chemworkbench.utils.file_sniffer.detectors.ascii.multi_column_ascii_detector import MultiColumnAsciiDetector
+from chemworkbench.utils.file_sniffer.detectors.spectroscopy.jcamp_detector import JcampDetector
+
+
+# ======================================================================
+# Build the FormatDetectionEngine with all detectors
+# ======================================================================
+
+FORMAT_ENGINE = FormatDetectionEngine(detectors=[
+    HeaderedCSVDetector(),
+    NoHeaderCSVDetector(),
+    TwoColumnAsciiDetector(),
+    MultiColumnAsciiDetector(),
+    JcampDetector(),
+    # future: SPCDetector(), OpusDetector(), vendor directory detectors, etc.
+])
 
 
 # ======================================================================
@@ -48,9 +69,9 @@ def sniff_file(path: str | Path) -> DetectedFormat:
     v2.2 file‑sniffing orchestrator.
 
     Steps:
-    1. Normalize file → NormalizedFileInfo
-    2. Score technique using anchor engine
-    3. Select loader based on file format
+    1. Run FormatDetectionEngine → format_id
+    2. Lookup loader_class via FORMAT_REGISTRY
+    3. Run TechniqueDetectionEngine → technique
     4. Return DetectedFormat(vendor, technique, subtype, confidence)
     """
     path = Path(path)
@@ -64,31 +85,35 @@ def sniff_file(path: str | Path) -> DetectedFormat:
         )
 
     # ------------------------------------------------------------
-    # Step 1: Normalization
+    # Step 1: Structural format detection
     # ------------------------------------------------------------
-    normalized = normalize_file(path)
+    fmt_result = FORMAT_ENGINE.detect(path)
+    format_id = fmt_result.format_id
+    format_conf = fmt_result.confidence
 
     # ------------------------------------------------------------
-    # Step 2: Technique scoring
+    # Step 2: Loader lookup
     # ------------------------------------------------------------
-    technique_score = score_technique(normalized)
-    technique = technique_score.technique
-    confidence = float(technique_score.score)
-
-    # ------------------------------------------------------------
-    # Step 3: Loader selection (format‑based)
-    # ------------------------------------------------------------
-    loader_cls = select_loader_for_path(path)
+    loader_cls = FORMAT_REGISTRY.get(format_id)
     if loader_cls is None:
         # No loader found → technique may still be correct
         return DetectedFormat(
             vendor=None,
-            technique=technique,
-            subtype=None,
-            confidence=confidence,
+            technique=Technique.UNKNOWN,
+            subtype=format_id,
+            confidence=format_conf,
         )
 
     loader = loader_cls()
+
+    # ------------------------------------------------------------
+    # Step 3: Technique scoring (semantic)
+    # ------------------------------------------------------------
+    # NOTE: technique scoring uses normalized tokens, not raw bytes.
+    # We normalize inside the technique engine.
+    technique_score = score_technique(loader.normalize_for_technique(path))
+    technique = technique_score.technique
+    technique_conf = float(technique_score.score)
 
     # ------------------------------------------------------------
     # Step 4: Construct DetectedFormat
@@ -97,5 +122,5 @@ def sniff_file(path: str | Path) -> DetectedFormat:
         vendor=loader.VENDOR,
         technique=technique,
         subtype=loader.FORMAT,
-        confidence=confidence,
+        confidence=max(format_conf, technique_conf),
     )
