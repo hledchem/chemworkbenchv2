@@ -22,48 +22,53 @@ format_id → loader_class.
 """
 
 from __future__ import annotations
-
 from typing import Dict, Type
 
+# ----------------------------------------------------------------------
 # Universal loaders
-from chemworkbench.loaders.csv_loader import CSVLoader
-from chemworkbench.loaders.xlsx_loader import XLSXLoader
-from chemworkbench.loaders.jcamp_loader import JCampLoader
-from chemworkbench.loaders.2col_ascii_loader import TwoColumnASCIILoader
-from chemworkbench.loaders.multicol_ascii_loader import MultiColumnASCIILoader
+# ----------------------------------------------------------------------
 
+from chemworkbench.utils.loaders.csv_loader import CSVLoader
+from chemworkbench.utils.loaders.xlsx_loader import XLSXLoader
+from chemworkbench.utils.loaders.jcamp_loader import JCAMPLoader
+from chemworkbench.utils.loaders.ascii_2col_loader import ASCII2ColLoader
+from chemworkbench.utils.loaders.ascii_multicol_loader import ASCIIMultiColLoader
+
+# ----------------------------------------------------------------------
 # Vendor loaders
-from chemworkbench.loaders.agilent.agilent_d_uvvis_loader import AgilentDUVVisLoader
-from chemworkbench.loaders.agilent.agilent_d_chrom_loader import AgilentDChromLoader
-from chemworkbench.loaders.agilent.agilent_d_ms_loader import AgilentDMSLoader
+# ----------------------------------------------------------------------
 
-from chemworkbench.loaders.bruker.bruker_opus_loader import BrukerOpusLoader
-from chemworkbench.loaders.bruker.bruker_nmr_loader import BrukerNMRLoader
-from chemworkbench.loaders.bruker.bruker_epr_loader import BrukerEPRLoader
+from chemworkbench.utils.loaders.agilent.agilent_d_uvvis_loader import AgilentDUVVisLoader
+from chemworkbench.utils.loaders.agilent.agilent_d_chrom_loader import AgilentDChromLoader
+from chemworkbench.utils.loaders.agilent.agilent_d_ms_loader import AgilentDMSLoader
 
-from chemworkbench.loaders.thermo.thermo_spc_loader import ThermoSPCLoader
-from chemworkbench.loaders.thermo.thermo_spa_loader import ThermoSPALoader
-from chemworkbench.loaders.thermo.thermo_srs_loader import ThermoSRSLoader
+from chemworkbench.utils.loaders.bruker.bruker_opus_loader import BrukerOPUSLoader
+from chemworkbench.utils.loaders.bruker.bruker_nmr_loader import BrukerNMRLoader
+from chemworkbench.utils.loaders.bruker.bruker_epr_loader import BrukerEPRLoader
 
-from chemworkbench.loaders.shimadzu.shimadzu_spc_loader import ShimadzuSPCLoader
-from chemworkbench.loaders.shimadzu.shimadzu_irx_loader import ShimadzuIRXLoader
-from chemworkbench.loaders.shimadzu.shimadzu_uvs_loader import ShimadzuUVSLoader
-from chemworkbench.loaders.shimadzu.shimadzu_lcd_loader import ShimadzuLCDLoader
+from chemworkbench.utils.loaders.thermo.thermo_spc_loader import ThermoSPCLoader
+from chemworkbench.utils.loaders.thermo.thermo_spa_loader import ThermoSPALoader
+from chemworkbench.utils.loaders.thermo.thermo_srs_loader import ThermoSRSLoader
 
-from chemworkbench.loaders.perkinelmer.perkinelmer_sp_loader import PerkinElmerSPLoader
-from chemworkbench.loaders.perkinelmer.perkinelmer_spc_loader import PerkinElmerSPCLoader
+from chemworkbench.utils.loaders.shimadzu.shimadzu_spc_loader import ShimadzuSPCLoader
+from chemworkbench.utils.loaders.shimadzu.shimadzu_irx_loader import ShimadzuIRXLoader
+from chemworkbench.utils.loaders.shimadzu.shimadzu_uvs_loader import ShimadzuUVSLoader
+from chemworkbench.utils.loaders.shimadzu.shimadzu_lcd_loader import ShimadzuLCDLoader
 
-from chemworkbench.loaders.waters.waters_raw_loader import WatersRAWLoader
+from chemworkbench.utils.loaders.perkinelmer.perkinelmer_sp_loader import PerkinElmerSPLoader
+from chemworkbench.utils.loaders.perkinelmer.perkinelmer_spc_loader import PerkinElmerSPCLoader
 
-from chemworkbench.loaders.jeol.jeol_jdf_loader import JeolJDFLoader
-from chemworkbench.loaders.varian.varian_nmr_loader import VarianNMRLoader
+from chemworkbench.utils.loaders.waters.waters_raw_loader import WatersRAWLoader
 
-from chemworkbench.loaders.raman.dpt_loader import DPTLoader
-from chemworkbench.loaders.raman.rruf_loader import RRUFLoader
-from chemworkbench.loaders.raman.rruf_gz_loader import RRUFGZLoader
+from chemworkbench.utils.loaders.jeol.jeol_jdf_loader import JEOLJDFLoader
+from chemworkbench.utils.loaders.varian.varian_nmr_loader import VarianNMRLoader
 
-from chemworkbench.loaders.horiba.horiba_fluor_loader import HoribaFluorLoader
-from chemworkbench.loaders.ch_instruments.chi_dta_loader import CHIDTALoader
+from chemworkbench.utils.loaders.raman.dpt_loader import DPTLoader
+from chemworkbench.utils.loaders.raman.rruf_loader import RRUFFLoader
+from chemworkbench.utils.loaders.raman.rruf_gz_loader import RRUFFGZLoader
+
+from chemworkbench.utils.loaders.horiba.horiba_fluor_loader import HoribaFluorescenceLoader
+from chemworkbench.utils.loaders.ch_instruments.chi_dta_loader import CHIDTALoader
 
 
 # ======================================================================
@@ -71,15 +76,16 @@ from chemworkbench.loaders.ch_instruments.chi_dta_loader import CHIDTALoader
 # ======================================================================
 
 FORMAT_REGISTRY: Dict[str, Type] = {
+
     # ------------------------------------------------------------
     # Universal formats
     # ------------------------------------------------------------
     "generic_csv_headered": CSVLoader,
     "generic_csv_no_header": CSVLoader,
     "generic_xlsx": XLSXLoader,
-    "jcamp_dx": JCampLoader,
-    "two_column_ascii": TwoColumnASCIILoader,
-    "multi_column_ascii": MultiColumnASCIILoader,
+    "jcamp_dx": JCAMPLoader,
+    "two_column_ascii": ASCII2ColLoader,
+    "multi_column_ascii": ASCIIMultiColLoader,
 
     # ------------------------------------------------------------
     # Agilent MassHunter directory formats
@@ -91,7 +97,7 @@ FORMAT_REGISTRY: Dict[str, Type] = {
     # ------------------------------------------------------------
     # Bruker formats
     # ------------------------------------------------------------
-    "bruker_opus_binary": BrukerOpusLoader,
+    "bruker_opus_binary": BrukerOPUSLoader,
     "bruker_nmr_dir": BrukerNMRLoader,
     "bruker_epr_dir": BrukerEPRLoader,
 
@@ -124,7 +130,7 @@ FORMAT_REGISTRY: Dict[str, Type] = {
     # ------------------------------------------------------------
     # JEOL formats
     # ------------------------------------------------------------
-    "jeol_jdf_binary": JeolJDFLoader,
+    "jeol_jdf_binary": JEOLJDFLoader,
 
     # ------------------------------------------------------------
     # Varian formats
@@ -135,13 +141,13 @@ FORMAT_REGISTRY: Dict[str, Type] = {
     # Raman formats
     # ------------------------------------------------------------
     "raman_dpt_ascii": DPTLoader,
-    "raman_rruf_ascii": RRUFLoader,
-    "raman_rruf_gzip": RRUFGZLoader,
+    "raman_rruf_ascii": RRUFFLoader,
+    "raman_rruf_gzip": RRUFFGZLoader,
 
     # ------------------------------------------------------------
     # Fluorescence formats
     # ------------------------------------------------------------
-    "horiba_fluor_ascii": HoribaFluorLoader,
+    "horiba_fluor_ascii": HoribaFluorescenceLoader,
 
     # ------------------------------------------------------------
     # Electrochemistry formats
