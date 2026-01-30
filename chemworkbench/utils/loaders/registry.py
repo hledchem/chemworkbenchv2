@@ -73,10 +73,17 @@ from .varian.varian_nmr_loader import VarianNMRLoader
 # Waters
 from .waters.waters_raw_loader import WatersRAWLoader
 
+# Universal ASCII loaders
+from .ascii_2col_loader import ASCII2ColLoader
+from .ascii_multicol_loader import ASCIIMultiColLoader
+
 # Universal
 from .csv_loader import CSVLoader
 from .jcamp_loader import JCAMPLoader
 from .xlsx_loader import XLSXLoader
+
+
+  
 
 
 # ---------------------------------------------------------
@@ -131,13 +138,15 @@ LOADER_CLASSES: List[Type[BaseVendorLoader]] = [
     # Waters
     WatersRAWLoader,
 
+    # Universal ASCII
+    ASCII2ColLoader,
+    ASCIIMultiColLoader,
+
     # Universal
     CSVLoader,
     JCAMPLoader,
     XLSXLoader,
 ]
-
-
 # ---------------------------------------------------------
 # Public API
 # ---------------------------------------------------------
