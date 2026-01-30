@@ -1,16 +1,44 @@
 """
-core/registry.py
+ChemWorkBench v2.2 — Core Loader Registry
+=========================================
 
-Unified loader registry for ChemWorkBench v2.
-
-This registry maps:
+Purpose
+-------
+Central, canonical registry mapping:
     DetectedFormat → LoaderClass
 
-Supports:
-- universal loaders
-- vendor-specific loaders
-- plugin loaders
-- technique-aware resolution
+This module is the authoritative source of truth for loader resolution
+after the file-sniffer pipeline determines:
+    - vendor
+    - technique
+    - subtype
+    - format key
+
+Architectural Notes (v2.2)
+--------------------------
+• Loaders are *format-based*, not technique-based.
+• Technique is determined upstream by the sniffer + anchor engine.
+• Registry keys follow frozen v2.2 canonical naming:
+      "<vendor>_<subtype>"
+      "<vendor>_<technique>"
+      "<technique>"
+      "<format>"
+• Universal loaders (CSV, JCAMP, ASCII, XLSX) are registered under
+  pure format keys.
+• Plugin loaders register via `register_plugin()` and override vendor
+  matches when appropriate.
+
+Public API
+----------
+- loader_registry.resolve_loader(fmt)
+- loader_registry.register(key, cls)
+- loader_registry.register_plugin(key, cls)
+
+This file is intentionally static and explicit to ensure:
+    • determinism
+    • reproducibility
+    • plugin safety
+    • LLM-friendly introspection
 """
 
 from __future__ import annotations
@@ -25,6 +53,8 @@ from chemworkbench.core.models import DetectedFormat, Technique
 from chemworkbench.utils.loaders.csv_loader import CSVLoader
 from chemworkbench.utils.loaders.xlsx_loader import XLSXLoader
 from chemworkbench.utils.loaders.jcamp_loader import JCAMPLoader
+from chemworkbench.utils.loaders.ascii_2col_loader import ASCII2ColLoader
+from chemworkbench.utils.loaders.ascii_multicol_loader import ASCIIMultiColLoader
 
 # ----------------------------------------------------------------------
 # Agilent loaders
@@ -113,8 +143,14 @@ from chemworkbench.utils.loaders.ch_instruments.chi_dta_loader import CHIDTALoad
 
 class LoaderRegistry:
     """
-    Central registry for all loaders.
-    Maps canonical keys → LoaderClass
+    Canonical v2.2 loader registry.
+
+    Maps frozen keys → LoaderClass.
+    Resolution is deterministic and ordered:
+        1. vendor + subtype
+        2. vendor + technique
+        3. technique-only
+        4. plugin overrides
     """
 
     def __init__(self):
@@ -142,6 +178,8 @@ class LoaderRegistry:
         self.register("csv", CSVLoader)
         self.register("xlsx", XLSXLoader)
         self.register("jcamp", JCAMPLoader)
+        self.register("ascii_2col", ASCII2ColLoader)
+        self.register("ascii_multicol", ASCIIMultiColLoader)
 
         # Agilent
         self.register("agilent_uv", AgilentUVLoader)
