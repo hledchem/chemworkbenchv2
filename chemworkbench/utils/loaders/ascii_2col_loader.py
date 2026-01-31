@@ -41,7 +41,7 @@ from chemworkbench.utils.loaders.base_loader import (
 # Two‑Column ASCII Loader (v2.2)
 # ======================================================================
 
-class TwoColumnASCIILoader(BaseVendorLoader):
+class ASCII2ColLoader(BaseVendorLoader):
     """
     Universal two‑column ASCII loader for ChemWorkBench v2.2.
 
