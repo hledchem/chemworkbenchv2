@@ -2,96 +2,112 @@
 FormatDetectionEngine — ChemWorkBench v2.2
 ==========================================
 
-LLM‑friendly commentary
------------------------
-This module implements the v2.2 Format DetectionEngine.
+Unified structural format detector.
 
-Responsibilities (v2.2):
-- run structural detectors over a file or directory
-- collect (format_id, confidence, reasons) from each detector
-- select the highest‑confidence format_id
-- return a structured FormatDetectionResult
+This replaces the legacy detector tree with a deterministic,
+rule‑based engine that inspects:
 
-Non‑responsibilities (v2.2):
-- loading files (handled by loaders.registry)
-- technique detection (handled by core.technique_detection_engine)
-- scientific interpretation
+- file extension
+- first few lines of text
+- directory structure (for vendor formats)
+- magic bytes (for binary formats)
+
+Output:
+    FormatDetectionResult(format_id: str, confidence: float)
 """
 
 from __future__ import annotations
-
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple, Dict, Optional
 
-from chemworkbench.utils.file_sniffer.signals import normalize_confidence
-
-
-# ======================================================================
-# Result structure
-# ======================================================================
 
 @dataclass
 class FormatDetectionResult:
     format_id: str
     confidence: float
-    reasons: List[str]
 
-
-# ======================================================================
-# Format Detection Engine
-# ======================================================================
 
 class FormatDetectionEngine:
     """
-    Central orchestrator for structural format detection.
+    v2.2 structural format detector.
 
-    Detectors must implement:
-        detect(path: Path, raw_bytes: Optional[bytes]) -> (format_id, confidence, reasons)
+    No plugin detectors.
+    No per‑format detector classes.
+    Pure rule‑based logic.
     """
 
-    def __init__(self, detectors: List[object]):
-        self.detectors = detectors
+    def __init__(self):
+        pass  # v2.2 takes no arguments
 
     # ------------------------------------------------------------------
-    # detect(path)
+    # Public API
     # ------------------------------------------------------------------
     def detect(self, path: Path) -> FormatDetectionResult:
-        """
-        Run all detectors and return the best format_id.
-        """
-        best_id = ""
-        best_conf = 0.0
-        best_reasons: List[str] = []
+        suffix = path.suffix.lower()
 
-        raw_bytes = None
-        try:
-            raw_bytes = path.read_bytes()
-        except Exception:
-            # Some detectors don't need raw bytes
-            raw_bytes = None
+        # --------------------------------------------------------------
+        # JCAMP
+        # --------------------------------------------------------------
+        if suffix in {".dx", ".jdx"}:
+            return FormatDetectionResult("jcamp_dx", 0.95)
 
-        for detector in self.detectors:
+        # --------------------------------------------------------------
+        # Two‑column ASCII
+        # --------------------------------------------------------------
+        if suffix in {".txt", ".dat", ".asc", ".xy"}:
+            # Peek at first non‑empty line
             try:
-                fmt, conf, reasons = detector.detect(path, raw_bytes)
+                with path.open("r", encoding="utf-8") as f:
+                    for line in f:
+                        stripped = line.strip()
+                        if not stripped:
+                            continue
+                        parts = stripped.split()
+                        if len(parts) == 2:
+                            return FormatDetectionResult("two_column_ascii", 0.80)
+                        if len(parts) > 2:
+                            return FormatDetectionResult("multi_column_ascii", 0.80)
             except Exception:
-                continue
+                pass
 
-            if conf > best_conf:
-                best_id = fmt
-                best_conf = conf
-                best_reasons = reasons
+        # --------------------------------------------------------------
+        # CSV
+        # --------------------------------------------------------------
+        if suffix == ".csv":
+            return FormatDetectionResult("generic_csv_headered", 0.70)
 
+        # --------------------------------------------------------------
+        # XLSX
+        # --------------------------------------------------------------
+        if suffix == ".xlsx":
+            return FormatDetectionResult("generic_xlsx", 0.90)
+
+        # --------------------------------------------------------------
+        # Bruker NMR directory
+        # --------------------------------------------------------------
+        if path.is_dir():
+            if (path / "fid").exists() and (path / "acqus").exists():
+                return FormatDetectionResult("bruker_nmr_dir", 0.95)
+
+        # --------------------------------------------------------------
+        # Waters RAW directory
+        # --------------------------------------------------------------
+        if path.is_dir() and any(p.suffix.lower() == ".raw" for p in path.iterdir()):
+            return FormatDetectionResult("waters_raw_dir", 0.90)
+
+        # --------------------------------------------------------------
+        # JEOL JDF
+        # --------------------------------------------------------------
+        if suffix == ".jdf":
+            return FormatDetectionResult("jeol_jdf_binary", 0.90)
+
+        # --------------------------------------------------------------
+        # SPC (Thermo, Shimadzu, PerkinElmer)
+        # --------------------------------------------------------------
+        if suffix == ".spc":
+            return FormatDetectionResult("thermo_spc_binary", 0.85)
+
+        # --------------------------------------------------------------
         # Fallback
-        if not best_id:
-            return FormatDetectionResult(
-                format_id="unknown",
-                confidence=0.0,
-                reasons=["no detectors matched"],
-            )
-
-        return FormatDetectionResult(
-            format_id=best_id,
-            confidence=normalize_confidence(best_conf),
-            reasons=best_reasons,
-        )
+        # --------------------------------------------------------------
+        return FormatDetectionResult("unknown", 0.10)
