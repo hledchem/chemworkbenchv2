@@ -5,13 +5,12 @@ Multi‑Column ASCII Loader — ChemWorkBench v2.2
 LLM‑friendly commentary
 -----------------------
 This loader implements the canonical v2.2 ingestion architecture for
-multi‑column ASCII files. These files appear across many vendor exports
-and generic lab workflows. The loader does *not* interpret meaning. It
-simply reads N numeric columns into a universal structure.
+multi‑column ASCII files. These appear across UV‑Vis, IR, Raman,
+fluorescence, electrochemistry, and general scientific data exports.
 
 Responsibilities:
 - Read multi‑column ASCII files safely and deterministically
-- Produce a universal structure: list‑of‑dicts with synthetic column names
+- Produce a universal structure: list‑of‑dicts with keys col_0, col_1, ...
 - Extract minimal structural metadata
 - Raise structured loader errors
 
@@ -20,13 +19,12 @@ Non‑responsibilities:
 - Vendor detection
 - Scientific interpretation
 - Token normalization
-- Anchor scoring
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Dict
 
 from chemworkbench.utils.loaders.base_loader import (
     BaseVendorLoader,
@@ -40,7 +38,7 @@ from chemworkbench.utils.loaders.base_loader import (
 # Multi‑Column ASCII Loader (v2.2)
 # ======================================================================
 
-class MultiColumnASCIILoader(BaseVendorLoader):
+class ASCIIMultiColLoader(BaseVendorLoader):
     """
     Universal multi‑column ASCII loader for ChemWorkBench v2.2.
 
@@ -49,17 +47,23 @@ class MultiColumnASCIILoader(BaseVendorLoader):
         <float> <float> <float> ...
         ...
 
-    The loader does not validate technique or units. It simply parses
-    N numeric columns separated by whitespace.
+    Columns are returned as:
+        {"col_0": float, "col_1": float, ...}
     """
 
     VENDOR = "universal"
     FORMAT = "multi_column_ascii"
-    EXTENSIONS = (".txt", ".dat", ".asc")  # non‑authoritative
+    EXTENSIONS = (".txt", ".dat", ".asc", ".csv")  # non‑authoritative
 
+    # ------------------------------------------------------------------
+    # sniff(path)
+    # ------------------------------------------------------------------
     def sniff(self, path: Path) -> bool:
         return path.suffix.lower() in self.EXTENSIONS
 
+    # ------------------------------------------------------------------
+    # load_raw(path)
+    # ------------------------------------------------------------------
     def load_raw(self, path: Path) -> Any:
         rows = []
         try:
@@ -68,28 +72,43 @@ class MultiColumnASCIILoader(BaseVendorLoader):
                     stripped = line.strip()
                     if not stripped:
                         continue
+
                     parts = stripped.split()
+                    if len(parts) < 2:
+                        raise LoaderReadError(
+                            f"Expected ≥2 columns in '{path}', got {len(parts)}"
+                        )
+
+                    # Convert all columns to floats
                     try:
                         floats = list(map(float, parts))
-                    except ValueError:
+                    except Exception as exc:
                         raise LoaderReadError(
-                            f"Non‑numeric token encountered in '{path}'"
-                        )
-                    row = {f"col{i+1}": val for i, val in enumerate(floats)}
+                            f"Non‑numeric value in multi‑column ASCII file '{path}': {exc}"
+                        ) from exc
+
+                    row: Dict[str, float] = {
+                        f"col_{i}": value for i, value in enumerate(floats)
+                    }
                     rows.append(row)
+
             return rows
+
         except Exception as exc:
             raise LoaderReadError(
                 f"Failed to read multi‑column ASCII file '{path}': {exc}"
             ) from exc
 
+    # ------------------------------------------------------------------
+    # extract_metadata(raw_data)
+    # ------------------------------------------------------------------
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
             num_cols = len(raw_data[0]) if raw_data else 0
             return {
                 "format": self.FORMAT,
                 "vendor": self.VENDOR,
-                "num_rows": len(raw_data),
+                "num_points": len(raw_data),
                 "num_columns": num_cols,
             }
         except Exception as exc:
@@ -97,6 +116,9 @@ class MultiColumnASCIILoader(BaseVendorLoader):
                 f"Failed to extract metadata from multi‑column ASCII: {exc}"
             ) from exc
 
+    # ------------------------------------------------------------------
+    # to_universal(raw_data, metadata)
+    # ------------------------------------------------------------------
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
             return raw_data
