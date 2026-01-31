@@ -1,73 +1,68 @@
 """
-Detection Engine — ChemWorkBench v2.2
-=====================================
+DetectionEngine — ChemWorkBench v2.2
+====================================
 
-LLM‑friendly commentary
------------------------
-This module defines the DetectionEngine, the central orchestrator for
-format detection in ChemWorkBench. It loads all registered detectors,
-executes them in a deterministic order, and returns the highest‑confidence
-match.
+Unified detection engine combining:
 
-Design goals:
-    - Deterministic: detectors run in a fixed, canonical order.
-    - Transparent: each detector returns (format_id, confidence, reasons).
-    - Extensible: new detectors can be added by registering their class.
-    - LLM‑safe: commentary is explicit, structured, and easy for an LLM
-      to reason about, extend, or regenerate.
-
-The engine itself does not interpret scientific meaning. It only
-coordinates structural detectors and selects the best match.
+1. FormatDetectionEngine → structural format_id
+2. FORMAT_REGISTRY → loader class
+3. Technique scoring → semantic technique
+4. DetectedFormat → unified result object
 """
 
 from __future__ import annotations
-
 from pathlib import Path
-from typing import Optional, Tuple, List
 
-from .registry import DETECTOR_CLASSES
+from chemworkbench.core.models import DetectedFormat, Technique
+from chemworkbench.core.technique_detection_engine import score as score_technique
+
+from chemworkbench.utils.file_sniffer.format_detection_engine import FormatDetectionEngine
+from chemworkbench.utils.file_sniffer.format_registry import FORMAT_REGISTRY
 
 
 class DetectionEngine:
     """
-    Runs all registered detectors and returns the highest-confidence match.
-
-    Each detector implements:
-        detect(path: Path, raw_bytes: Optional[bytes])
-            → (format_id: str, confidence: float, reasons: List[str])
-
-    The engine selects the detector with the highest confidence score.
+    Unified v2.2 detection engine.
     """
 
     def __init__(self):
-        # Instantiate each detector class from the registry
-        self.detectors = [cls() for cls in DETECTOR_CLASSES]
+        self.format_engine = FormatDetectionEngine()
 
-    def detect(
-        self,
-        path: Path,
-        raw_bytes: Optional[bytes] = None
-    ) -> Tuple[str, float, List[str]]:
-        """
-        Run all detectors and return the best match.
+    def run(self, path: Path) -> DetectedFormat:
+        if not path.exists():
+            return DetectedFormat(
+                vendor=None,
+                technique=Technique.UNKNOWN,
+                subtype=None,
+                confidence=0.0,
+            )
 
-        Args:
-            path: Path to the file or directory being inspected.
-            raw_bytes: Optional raw bytes for binary detectors.
+        # Step 1 — structural format detection
+        fmt_result = self.format_engine.detect(path)
+        format_id = fmt_result.format_id
+        format_conf = fmt_result.confidence
 
-        Returns:
-            (format_id, confidence, reasons)
-        """
-        best_format = ""
-        best_conf = 0.0
-        best_reasons: List[str] = []
+        # Step 2 — loader lookup
+        loader_cls = FORMAT_REGISTRY.get(format_id)
+        if loader_cls is None:
+            return DetectedFormat(
+                vendor=None,
+                technique=Technique.UNKNOWN,
+                subtype=format_id,
+                confidence=format_conf,
+            )
 
-        for detector in self.detectors:
-            fmt, conf, reasons = detector.detect(path, raw_bytes)
+        loader = loader_cls()
 
-            if conf > best_conf:
-                best_format = fmt
-                best_conf = conf
-                best_reasons = reasons
+        # Step 3 — technique scoring
+        technique_score = score_technique(loader.normalize_for_technique(path))
+        technique = technique_score.technique
+        technique_conf = float(technique_score.score)
 
-        return best_format, best_conf, best_reasons
+        # Step 4 — construct result
+        return DetectedFormat(
+            vendor=loader.VENDOR,
+            technique=technique,
+            subtype=loader.FORMAT,
+            confidence=max(format_conf, technique_conf),
+        )
