@@ -7,18 +7,13 @@ chemworkbenchv2/
     # ------------------------------------------------------------
     ├── core/
     │   ├── __init__.py
+            detection_engine_legacy.py
     │   ├── models.py
     │   ├── pipeline.py
     │   ├── registry.py
     │   ├── routing.py
     │   ├── technique_anchors.py
-            technique_detector_engine.py
-    │   └── io/
-    │       ├── __init__.py
-    │       ├── json_loader.py
-    │       ├── yaml_loader.py
-    │       ├── serializer.py
-    │       └── versioning.py
+            technique_detection_engine.py
 
     # ------------------------------------------------------------
     # Processors: one folder per analytical technique
@@ -26,6 +21,7 @@ chemworkbenchv2/
     ├── processors/
     │   ├── __init__.py
     │   ├── base_processor.py
+            uvvis_processor.py
     │   └── uvvis/
     │       ├── __init__.py
     │       ├── config.py
@@ -46,6 +42,7 @@ chemworkbenchv2/
     │   ├── math_technique.py
     │   ├── plotting_utils.py
     │   └── normalization.py
+            
 
     # --------------------------------------------------------
     │   # File Detection System (NEW)
@@ -55,18 +52,30 @@ chemworkbenchv2/
     │   │   ├── file_sniffer.py
     │   │   ├── format_detection_engine.py    # ← NEW ENGINE
     │   │   ├── signals.py                    # ← scoring helpers
+                engine.py
+                core_detectors.py
+                format_registry.py
+                registry.py
+                spectral_detectors.py
     │   │   ├── detectors/
-    │   │   │   ├── __init__.py
-    │   │   │   ├── ascii/
-    │   │   │   │   ├── __init__.py
-    │   │   │   │   ├── headered_csv_detector.py
-    │   │   │   │   ├── no_header_csv_detector.py
-    │   │   │   │   ├── two_column_ascii_detector.py
-    │   │   │   │   ├── multi_column_ascii_detector.py
-    │   │   │   └── spectroscopy/
-    │   │   │       ├── __init__.py
-    │   │   │       ├── jcamp_detector.py
-    │   │   │       # future: spc_detector.py, opus_detector.py, etc.
+    │   │   │   ├── agilent_masshunter_detector.py
+                    bruker_nmr_detector.py
+                    fluorescence_ascii_detector.py
+                    headered_csv_detector
+                    ir_ascii_detector
+                    jcamp_detector
+                    jeol_jdf_detector
+                    multi_column_ascii_detector
+                    netcdf_detector
+                    no_header_csv_detector
+                    opus_detector
+                    raman_dpt_detector
+                    spc_detector
+                    two_column_ascii_detector
+                    uvvis_ascii_detector
+                    varian_fid_detector
+    │   │   │   
+
     │   │   └── vendor/
     │   │       ├── __init__.py
     │   │       ├── agilent_detectors.py
