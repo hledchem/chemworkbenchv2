@@ -1,121 +1,127 @@
 """
-Technique → Processor Routing — ChemWorkBench v2.2
-==================================================
+ChemWorkBench v2.2 — Processor Router
+=====================================
 
-LLM‑friendly commentary
------------------------
-This module provides the canonical mapping from Technique → ProcessorClass.
+Purpose
+-------
+The ProcessorRouter maps a detected scientific technique to the correct
+processor class. It is the bridge between the ingestion engine and the
+technique‑specific processing pipelines.
 
-Responsibilities:
-- return the correct processor class for a detected Technique
-- allow plugin processors to override built‑ins
-- remain deterministic and simple
+Design Principles (v2.2)
+------------------------
+• Technique detection is fully decoupled from processing.
+• Processors are registered by technique, not by format or vendor.
+• Router is deterministic, explicit, and LLM‑friendly.
+• Plugins may register new processors or override existing ones.
+• Router supports future multi‑stage and multi‑technique pipelines.
 
-Non‑responsibilities:
-- technique detection (handled by the anchor engine)
-- loader selection (handled by the loader registry)
-- file reading (handled by loaders)
-- scientific interpretation (handled by processors)
+Future‑Proofing Notes
+---------------------
+This router is designed for:
+• AI‑generated processors
+• Plugin ecosystems
+• Multi‑technique files (future extension)
+• Batch processing
+• Cloud processing services
+
+Public API
+----------
+- ProcessorRouter.register(technique, processor_cls)
+- ProcessorRouter.register_plugin(technique, processor_cls)
+- ProcessorRouter.resolve(technique) → Processor instance
 """
 
 from __future__ import annotations
 
-from typing import Dict, Optional, Type
+from typing import Dict, Type
 
 from chemworkbench.core.models import Technique
 from chemworkbench.processors.base_processor import BaseProcessor
 
-# Built‑in processors
+# Import built‑in processors
 from chemworkbench.processors.uvvis.processor import UVVisProcessor
 
-# Future processors (enable when implemented)
-# from chemworkbench.processors.ir.processor import IRProcessor
-# from chemworkbench.processors.raman.processor import RamanProcessor
-# from chemworkbench.processors.nmr.processor import NMRProcessor
-# from chemworkbench.processors.epr.processor import EPRProcessor
-# from chemworkbench.processors.cv.processor import CVProcessor
-# from chemworkbench.processors.chrom.processor import ChromProcessor
-# from chemworkbench.processors.gcms.processor import GCMSProcessor
-# from chemworkbench.processors.lcms.processor import LCMSProcessor
-
 
 # ======================================================================
-# Technique Router (v2.2)
+# Processor Router
 # ======================================================================
 
-class TechniqueRouter:
+class ProcessorRouter:
     """
-    Central router mapping Technique → ProcessorClass.
+    Canonical v2.2 processor router.
 
-    Rules:
-        - Built‑ins define the default mapping.
-        - Plugins may override built‑ins.
-        - Resolution is deterministic: plugin > built‑in > None.
+    Responsibilities
+    ----------------
+    • Map Technique → ProcessorClass
+    • Instantiate processors on demand
+    • Support plugin overrides
+    • Provide introspection for LLMs and developer tools
+
+    Non‑Responsibilities
+    --------------------
+    • Technique detection (handled by TechniqueEngine)
+    • Loader logic (handled by LoaderRegistry)
+    • Structural format detection (handled by FormatDetector)
     """
 
     def __init__(self) -> None:
-        self._routes: Dict[Technique, Type[BaseProcessor]] = {}
+        self._processors: Dict[Technique, Type[BaseProcessor]] = {}
         self._plugins: Dict[Technique, Type[BaseProcessor]] = {}
-        self._register_builtin_routes()
+        self._register_builtin_processors()
 
     # ------------------------------------------------------------------
     # Registration
     # ------------------------------------------------------------------
 
     def register(self, technique: Technique, processor_cls: Type[BaseProcessor]) -> None:
-        """Register a built‑in processor."""
-        self._routes[technique] = processor_cls
+        """Register a built‑in processor class."""
+        self._processors[technique] = processor_cls
 
     def register_plugin(self, technique: Technique, processor_cls: Type[BaseProcessor]) -> None:
-        """Register a plugin processor (overrides built‑ins)."""
+        """Register a plugin‑provided processor class."""
         self._plugins[technique] = processor_cls
 
     # ------------------------------------------------------------------
-    # Built‑in technique → processor mappings
+    # Built‑in processors
     # ------------------------------------------------------------------
 
-    def _register_builtin_routes(self) -> None:
+    def _register_builtin_processors(self) -> None:
+        """Register all built‑in processors for v2.2."""
         self.register(Technique.UVVIS, UVVisProcessor)
-        # Enable these as processors are implemented:
-        # self.register(Technique.IR, IRProcessor)
-        # self.register(Technique.RAMAN, RamanProcessor)
-        # self.register(Technique.NMR, NMRProcessor)
-        # self.register(Technique.EPR, EPRProcessor)
-        # self.register(Technique.CV, CVProcessor)
-        # self.register(Technique.CHROMATOGRAPHY, ChromProcessor)
-        # self.register(Technique.GCMS, GCMSProcessor)
-        # self.register(Technique.LCMS, LCMSProcessor)
+
+        # Future processors (IR, Raman, NMR, MS, etc.) will be added here.
 
     # ------------------------------------------------------------------
     # Resolution
     # ------------------------------------------------------------------
 
-    def resolve_processor(self, technique: Technique) -> Optional[Type[BaseProcessor]]:
+    def resolve(self, technique: Technique) -> BaseProcessor:
         """
-        Resolve a processor class for a given technique.
+        Resolve and instantiate the correct processor for a given technique.
+
         Plugin processors override built‑ins.
         """
-        # 1. Plugin override
+
+        # Plugin override
         if technique in self._plugins:
-            return self._plugins[technique]
+            return self._plugins[technique]()
 
-        # 2. Built‑in mapping
-        if technique in self._routes:
-            return self._routes[technique]
+        # Built‑in processor
+        if technique in self._processors:
+            return self._processors[technique]()
 
-        # 3. No processor available
-        return None
+        # Fallback: return a no‑op processor
+        return BaseProcessor()
 
+    # ------------------------------------------------------------------
+    # Introspection
+    # ------------------------------------------------------------------
 
-# ======================================================================
-# Singleton instance + convenience function
-# ======================================================================
-
-technique_router = TechniqueRouter()
-
-
-def get_processor_for_technique(technique: Technique) -> Optional[Type[BaseProcessor]]:
-    """
-    Public v2.2 API for processor routing.
-    """
-    return technique_router.resolve_processor(technique)
+    def describe(self) -> dict:
+        """Return a structured description for debugging or LLM reasoning."""
+        return {
+            "builtin_processors": [t.value for t in self._processors.keys()],
+            "plugin_processors": [t.value for t in self._plugins.keys()],
+            "supports_plugins": True,
+        }
