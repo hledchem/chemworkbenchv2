@@ -10,10 +10,11 @@ It coordinates:
     1. Structural format detection (FormatDetector)
     2. Format resolution (FormatRegistry)
     3. Loader resolution (LoaderRegistry)
-    4. Data loading (Loader → RawDataBundle)
-    5. Technique inference (TechniqueEngine)
-    6. Optional processing (ProcessorRouter)
-    7. PipelineResult assembly
+    4. Data loading (Loader → universal structure)
+    5. Universal → RawDataBundle conversion
+    6. Technique inference (TechniqueEngine)
+    7. Optional processing (ProcessorRouter)
+    8. PipelineResult assembly
 
 This module is intentionally simple, explicit, and LLM-friendly. It is the
 single entry point for turning a file path into a fully processed
@@ -46,15 +47,17 @@ Public API
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any, Mapping
 
 from chemworkbench.core.models import (
     RawDataBundle,
     PipelineResult,
     Technique,
+    Scan,
 )
 from chemworkbench.core.format_registry import FormatRegistry
 from chemworkbench.core.loader_registry import LoaderRegistry
+    # loader.load_raw(), loader.extract_metadata(), loader.to_universal()
 from chemworkbench.core.technique_detection_engine import TechniqueEngine
 from chemworkbench.core.routing import ProcessorRouter
 from chemworkbench.file_sniffer.format_detection_engine import FormatDetector
@@ -72,9 +75,10 @@ class IngestionEngine:
     ----------------
     • Detect structural format (FormatDetector)
     • Resolve loader (FormatRegistry + LoaderRegistry)
-    • Load raw data (Loader → RawDataBundle)
+    • Load universal data (loader)
+    • Convert universal → RawDataBundle
     • Infer technique (TechniqueEngine)
-    • Route to appropriate processor (ProcessorRouter)
+    • Route to processor (ProcessorRouter)
     • Produce PipelineResult
 
     Non-Responsibilities
@@ -101,6 +105,44 @@ class IngestionEngine:
         self.detector = detector or FormatDetector()
 
     # ------------------------------------------------------------------
+    # Universal → RawDataBundle conversion
+    # ------------------------------------------------------------------
+
+    def _to_rawdatabundle(self, universal: Any, detected) -> RawDataBundle:
+        """
+        Convert universal loader output into a RawDataBundle.
+        This is the canonical v2.2 ingestion pivot point.
+
+        Supported universal structures:
+        • {"x": [...], "y": [...], "label": ...}  → spectral Scan
+        • list-of-dicts → tabular RawDataBundle (CSV, multi-column)
+        """
+
+        # Case 1 — Spectral universal structure (UV‑Vis, IR, Raman, etc.)
+        if isinstance(universal, dict) and "x" in universal and "y" in universal:
+            scan = Scan(
+                x=universal["x"],
+                y=universal["y"],
+                label=universal.get("label", "Scan"),
+            )
+            return RawDataBundle(
+                scans=[scan],
+                technique=Technique.UNKNOWN,
+            )
+
+        # Case 2 — Tabular universal structure (CSV, multi-column ASCII)
+        if isinstance(universal, list) and universal and isinstance(universal[0], dict):
+            return RawDataBundle(
+                scans=[],
+                technique=Technique.UNKNOWN,
+                tabular=universal,
+            )
+
+        raise ValueError(
+            f"Unsupported universal structure for RawDataBundle: {type(universal)}"
+        )
+
+    # ------------------------------------------------------------------
     # Main API
     # ------------------------------------------------------------------
 
@@ -111,10 +153,11 @@ class IngestionEngine:
         Steps:
         1. Detect structural format
         2. Resolve loader
-        3. Load raw data
-        4. Infer technique
-        5. Route to processor
-        6. Produce PipelineResult
+        3. Load universal data
+        4. Convert universal → RawDataBundle
+        5. Infer technique
+        6. Route to processor
+        7. Produce PipelineResult
         """
 
         # --------------------------------------------------------------
@@ -130,24 +173,31 @@ class IngestionEngine:
         loader = loader_cls()
 
         # --------------------------------------------------------------
-        # 3. Load raw data
+        # 3. Load universal data
         # --------------------------------------------------------------
-        raw: RawDataBundle = loader.load(path, detected)
+        raw_data = loader.load_raw(path)
+        metadata = loader.extract_metadata(raw_data)
+        universal = loader.to_universal(raw_data, metadata)
 
         # --------------------------------------------------------------
-        # 4. Technique inference (anchor engine)
+        # 4. Convert universal → RawDataBundle
+        # --------------------------------------------------------------
+        raw = self._to_rawdatabundle(universal, detected)
+
+        # --------------------------------------------------------------
+        # 5. Technique inference (anchor engine)
         # --------------------------------------------------------------
         tech_result = self.technique_engine.detect(raw, detected)
         raw.technique = tech_result.technique
 
         # --------------------------------------------------------------
-        # 5. Route to processor (optional)
+        # 6. Route to processor (optional)
         # --------------------------------------------------------------
         processor = self.processor_router.resolve(raw.technique)
         processed = processor.process(raw)
 
         # --------------------------------------------------------------
-        # 6. Assemble PipelineResult
+        # 7. Assemble PipelineResult
         # --------------------------------------------------------------
         return PipelineResult(
             raw=raw,
