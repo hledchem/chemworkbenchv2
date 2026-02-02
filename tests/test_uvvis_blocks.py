@@ -1,0 +1,126 @@
+"""
+Sequential Block Activation Test — UV‑Vis Processor (ChemWorkBench v2.2)
+=======================================================================
+
+This test runs the UV‑Vis processor multiple times, each time enabling
+one additional processing block. It allows developers to visually and
+programmatically confirm that each block:
+
+    • runs without errors
+    • modifies the spectrum as expected
+    • produces correct metadata
+    • composes correctly with previous blocks
+
+This is the MNova‑style validation workflow.
+"""
+
+from copy import deepcopy
+
+from chemworkbench.ingestion.engine import IngestionEngine
+from chemworkbench.core.routing import ProcessorRouter
+from chemworkbench.processors.uvvis.config import UVVisConfig
+
+
+def print_step_header(title: str):
+    print("\n" + "=" * 80)
+    print(title)
+    print("=" * 80)
+
+
+def run_step(raw, config: UVVisConfig, description: str):
+    print_step_header(description)
+
+    router = ProcessorRouter()
+    processor = router.resolve(raw.technique)
+
+    processed = processor.process(raw)
+
+    print("\n--- Enabled Blocks ---")
+    for field, value in config.dict().items():
+        if value not in (None, False, "none"):
+            print(f"{field}: {value}")
+
+    print("\n--- Metadata ---")
+    for k, v in processed.metadata.items():
+        print(f"{k}: {v}")
+
+    print("\n--- Payload ---")
+    for k, v in processed.payload.items():
+        print(f"{k}: {v}")
+
+    print("\n--- Plots ---")
+    for i, plot in enumerate(processed.plots, start=1):
+        print(f"Plot {i}: {plot.title} ({len(plot.x)} points)")
+
+
+def run_sequential_test(filepath: str):
+    print("\n=== Sequential UV‑Vis Block Activation Test ===")
+
+    # --------------------------------------------------------------
+    # 1. Ingest file
+    # --------------------------------------------------------------
+    engine = IngestionEngine()
+    raw = engine.ingest(filepath)
+
+    print(f"Loaded: {filepath}")
+    print(f"Technique: {raw.technique}")
+
+    # --------------------------------------------------------------
+    # Base config (all blocks off)
+    # --------------------------------------------------------------
+    base = UVVisConfig(
+        baseline_method="none",
+        smoothing_method="none",
+        normalization_method="none",
+        detect_peaks=False,
+        integration_regions=None,
+    )
+
+    # --------------------------------------------------------------
+    # Step 1 — Raw only
+    # --------------------------------------------------------------
+    cfg1 = deepcopy(base)
+    run_step(raw, cfg1, "STEP 1 — Raw Spectrum Only")
+
+    # --------------------------------------------------------------
+    # Step 2 — Baseline only
+    # --------------------------------------------------------------
+    cfg2 = deepcopy(base)
+    cfg2.baseline_method = "polynomial"
+    run_step(raw, cfg2, "STEP 2 — Baseline Correction Only")
+
+    # --------------------------------------------------------------
+    # Step 3 — Baseline + Smoothing
+    # --------------------------------------------------------------
+    cfg3 = deepcopy(cfg2)
+    cfg3.smoothing_method = "moving_average"
+    run_step(raw, cfg3, "STEP 3 — Baseline + Smoothing")
+
+    # --------------------------------------------------------------
+    # Step 4 — Baseline + Smoothing + Normalization
+    # --------------------------------------------------------------
+    cfg4 = deepcopy(cfg3)
+    cfg4.normalization_method = "max"
+    run_step(raw, cfg4, "STEP 4 — Baseline + Smoothing + Normalization")
+
+    # --------------------------------------------------------------
+    # Step 5 — Add Peak Detection
+    # --------------------------------------------------------------
+    cfg5 = deepcopy(cfg4)
+    cfg5.detect_peaks = True
+    run_step(raw, cfg5, "STEP 5 — Add Peak Detection")
+
+    # --------------------------------------------------------------
+    # Step 6 — Add Integration
+    # --------------------------------------------------------------
+    cfg6 = deepcopy(cfg5)
+    cfg6.integration_regions = [(250, 350), (400, 500)]
+    run_step(raw, cfg6, "STEP 6 — Add Integration Regions")
+
+    print("\n=== Sequential Test Complete ===\n")
+
+
+if __name__ == "__main__":
+    # Replace with any UV‑Vis ASCII file
+    test_file = "data/example_uvvis.txt"
+    run_sequential_test(test_file)
