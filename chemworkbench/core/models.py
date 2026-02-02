@@ -55,6 +55,26 @@ class Technique(str, Enum):
 
 
 # ======================================================================
+# Scan Model (canonical spectral trace)
+# ======================================================================
+
+@dataclass
+class Scan:
+    """
+    Canonical v2.2 spectral scan model.
+
+    Represents a single x/y spectral trace (UV‑Vis, IR, Raman, MS, etc.)
+    """
+
+    x: List[float]
+    y: List[float]
+    label: str = "Scan"
+
+    def __repr__(self):
+        return f"Scan(label={self.label!r}, points={len(self.x)})"
+
+
+# ======================================================================
 # File Detection Result (output of file sniffer)
 # ======================================================================
 
@@ -68,6 +88,7 @@ class DetectedFormat:
     - subtype: loader-specific format identifier
     - confidence: technique confidence score
     """
+
     vendor: Optional[str]
     technique: Technique
     subtype: Optional[str] = None
@@ -78,29 +99,35 @@ class DetectedFormat:
 
 
 # ======================================================================
-# Raw Data Bundle (output of loaders)
+# Raw Data Bundle (output of ingestion engine)
 # ======================================================================
 
 @dataclass
 class RawDataBundle:
     """
-    Raw loader output in v2.2.
+    Canonical raw data container in v2.2.
 
-    Loaders must return:
-        - technique: Technique enum
-        - data: universal list-of-dicts [{"x": float, "y": float}, ...]
-        - metadata: loader-specific metadata
+    This is created by the ingestion engine, not loaders.
+
+    Fields:
+        - scans: list of Scan objects (spectral data)
+        - tabular: list-of-dicts (CSV, multi-column ASCII)
+        - technique: Technique enum (filled by TechniqueEngine)
+        - metadata: loader or ingestion metadata
         - source_path: original file path
     """
-    technique: Technique
-    data: Any
+
+    scans: List[Scan] = field(default_factory=list)
+    tabular: Optional[List[Dict[str, Any]]] = None
+    technique: Technique = Technique.UNKNOWN
     metadata: Dict[str, Any] = field(default_factory=dict)
     source_path: Optional[str] = None
 
-    def require(self, key: str) -> Any:
-        if key not in self.metadata:
-            raise KeyError(f"Missing required metadata field: {key}")
-        return self.metadata[key]
+    def is_spectral(self) -> bool:
+        return bool(self.scans)
+
+    def is_tabular(self) -> bool:
+        return self.tabular is not None
 
 
 # ======================================================================
@@ -119,6 +146,7 @@ class ProcessedData:
         - integration_results
         - plots (list of PlotConfig)
     """
+
     technique: Technique
     payload: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -144,25 +172,20 @@ class PlotConfig:
         - PlotEngine can render without ambiguity
     """
 
-    # Required
     type: str                     # "line", "scatter", "heatmap", etc.
 
-    # Optional descriptive fields
     label: Optional[str] = None
     title: Optional[str] = None
 
-    # Data payload
     x: Optional[List[float]] = None
     y: Optional[List[float]] = None
-    z: Optional[List[List[float]]] = None   # for 2D maps
+    z: Optional[List[List[float]]] = None
 
-    # Styling
     color: Optional[str] = None
     linewidth: Optional[float] = None
     alpha: Optional[float] = None
     style: Dict[str, Any] = field(default_factory=dict)
 
-    # Arbitrary metadata for UI/engine
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def require_xy(self):
@@ -186,6 +209,7 @@ class PipelineResult:
         - qc: processor QC metrics
         - plots: list of PlotConfig
     """
+
     raw: RawDataBundle
     processed: Dict[str, Any]
     metadata: Dict[str, Any]
