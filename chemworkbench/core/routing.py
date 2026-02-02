@@ -125,3 +125,4 @@ class ProcessorRouter:
             "plugin_processors": [t.value for t in self._plugins.keys()],
             "supports_plugins": True,
         }
+    
