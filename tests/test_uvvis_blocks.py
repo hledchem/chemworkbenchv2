@@ -122,5 +122,5 @@ def run_sequential_test(filepath: str):
 
 if __name__ == "__main__":
     # Replace with any UV‑Vis ASCII file
-    test_file = "data/example_uvvis.txt"
+    test_file = "tests/synthetic_data/uvvis_synthetic_500nm.csv"
     run_sequential_test(test_file)
