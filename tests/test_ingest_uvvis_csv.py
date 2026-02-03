@@ -8,8 +8,9 @@ from chemworkbench.core.technique_detection_engine import TechniqueEngine
 from chemworkbench.core.routing import ProcessorRouter
 from chemworkbench.core.models import RawDataBundle, Technique
 
-from chemworkbench.core.format_registry_init import register_builtin_formats
-from chemworkbench.core.loader_registry_init import register_builtin_loaders
+# UPDATED IMPORTS
+from chemworkbench.core.format_registry_init import build_default_format_registry
+from chemworkbench.core.loader_registry_init import build_default_loader_registry
 
 
 def test_ingest_uvvis_synthetic_csv():
@@ -27,13 +28,10 @@ def test_ingest_uvvis_synthetic_csv():
     # --------------------------------------------------------------
     # Build ingestion engine
     # --------------------------------------------------------------
-    format_registry = FormatRegistry()
-    loader_registry = LoaderRegistry()
+    format_registry = build_default_format_registry()
+    loader_registry = build_default_loader_registry()
     tech_engine = TechniqueEngine()
     router = ProcessorRouter()
-
-    register_builtin_formats(format_registry)
-    register_builtin_loaders(loader_registry)
 
     engine = IngestionEngine(
         format_registry=format_registry,
@@ -69,4 +67,5 @@ def test_ingest_uvvis_synthetic_csv():
     assert result.qc is not None
 
     # Plots should be present (block pipeline)
-    assert isinstance(result.plots, dict)
+    assert result.plots is not None
+    assert isinstance(result.plots, list)
