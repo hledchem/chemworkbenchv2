@@ -18,6 +18,7 @@ from chemworkbench.core.ingestion_engine import IngestionEngine
 from chemworkbench.core.routing import ProcessorRouter
 from chemworkbench.core.technique_detection_engine import TechniqueEngine
 
+# *** ONLY CHANGE MADE HERE ***
 from chemworkbench.core.format_registry_init import build_default_format_registry
 from chemworkbench.core.loader_registry_init import build_default_loader_registry
 
