@@ -60,7 +60,7 @@ from chemworkbench.core.loader_registry import LoaderRegistry
     # loader.load_raw(), loader.extract_metadata(), loader.to_universal()
 from chemworkbench.core.technique_detection_engine import TechniqueEngine
 from chemworkbench.core.routing import ProcessorRouter
-from chemworkbench.file_sniffer.format_detection_engine import FormatDetector
+from chemworkbench.utils.file_sniffer.format_detection_engine import FormatDetector
 
 
 # ======================================================================
