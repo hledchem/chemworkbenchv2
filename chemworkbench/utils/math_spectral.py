@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from typing import Sequence, Tuple, Optional, Dict, Any
 import numpy as np
-from numpy import integrate  # NumPy 2.0‑safe trapezoidal integration
+from numpy.lib import integrate  # NumPy 2.0‑safe trapezoidal integration
 
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
