@@ -24,6 +24,9 @@ from chemworkbench.core.loader_registry_init import build_default_loader_registr
 
 from chemworkbench.processors.uvvis.config import UVVisConfig
 
+# NEW: plotting service import
+from chemworkbench.services.plotting_service import PlottingService
+
 
 def print_step_header(title: str):
     print("\n" + "=" * 80)
@@ -53,8 +56,11 @@ def run_step(raw, config: UVVisConfig, description: str):
         print(f"{k}: {v}")
 
     print("\n--- Plots ---")
+    plotter = PlottingService()   # NEW: instantiate plotting service
+
     for i, plot in enumerate(processed.plots, start=1):
-        print(f"Plot {i}: {plot.title} ({len(plot.x)} points)")
+        print(f"Plot {i}: {plot.title} ({len(plot.x or [])} points)")
+        plotter.render([plot])    # NEW: render each plot
 
 
 def run_sequential_test(filepath: str):
