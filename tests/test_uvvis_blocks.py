@@ -3,21 +3,24 @@ Sequential Block Activation Test — UV‑Vis Processor (ChemWorkBench v2.2)
 =======================================================================
 
 This test runs the UV‑Vis processor multiple times, each time enabling
-one additional processing block. It allows developers to visually and
-programmatically confirm that each block:
+one additional processing block. It validates that each block:
 
     • runs without errors
     • modifies the spectrum as expected
     • produces correct metadata
     • composes correctly with previous blocks
-
-This is the MNova‑style validation workflow.
 """
 
 from copy import deepcopy
+from pathlib import Path
 
-from chemworkbench.ingestion.engine import IngestionEngine
+from chemworkbench.core.ingestion_engine import IngestionEngine
 from chemworkbench.core.routing import ProcessorRouter
+from chemworkbench.core.technique_detection_engine import TechniqueEngine
+
+from chemworkbench.core.format_registry_init import build_default_format_registry
+from chemworkbench.core.loader_registry_init import build_default_loader_registry
+
 from chemworkbench.processors.uvvis.config import UVVisConfig
 
 
@@ -33,7 +36,7 @@ def run_step(raw, config: UVVisConfig, description: str):
     router = ProcessorRouter()
     processor = router.resolve(raw.technique)
 
-    processed = processor.process(raw)
+    processed = processor.process(raw, config=config)
 
     print("\n--- Enabled Blocks ---")
     for field, value in config.dict().items():
@@ -57,10 +60,25 @@ def run_sequential_test(filepath: str):
     print("\n=== Sequential UV‑Vis Block Activation Test ===")
 
     # --------------------------------------------------------------
-    # 1. Ingest file
+    # 1. Build ingestion engine
     # --------------------------------------------------------------
-    engine = IngestionEngine()
-    raw = engine.ingest(filepath)
+    format_registry = build_default_format_registry()
+    loader_registry = build_default_loader_registry()
+    technique_engine = TechniqueEngine()
+    router = ProcessorRouter()
+
+    engine = IngestionEngine(
+        format_registry=format_registry,
+        loader_registry=loader_registry,
+        technique_engine=technique_engine,
+        processor_router=router,
+    )
+
+    # --------------------------------------------------------------
+    # 2. Ingest file
+    # --------------------------------------------------------------
+    result = engine.ingest(Path(filepath))
+    raw = result.raw
 
     print(f"Loaded: {filepath}")
     print(f"Technique: {raw.technique}")
@@ -121,6 +139,5 @@ def run_sequential_test(filepath: str):
 
 
 if __name__ == "__main__":
-    # Replace with any UV‑Vis ASCII file
     test_file = "tests/synthetic_data/uvvis_synthetic_500nm.csv"
     run_sequential_test(test_file)
