@@ -12,9 +12,9 @@ with the v2.2 ingestion engine.
 Universal Output Structure
 --------------------------
 {
-    "x": [...],
-    "y": [...],
-    "label": "JCAMP Spectrum"
+    "tabular": [...],   # list-of-dicts: {"x": float, "y": float}
+    "scans": [Scan(...)],
+    "metadata": {...}
 }
 
 This loader does *not* attempt to interpret multi-block JCAMP, derivative
@@ -25,8 +25,9 @@ of simple UV‑Vis, IR, Raman, and general spectral JCAMP files.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Mapping, List
 
+from chemworkbench.core.models import Scan
 from .base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -89,32 +90,51 @@ class JCAMPDXLoader(BaseVendorLoader):
             raise LoaderMetadataError(f"Failed to extract JCAMP metadata: {exc}") from exc
 
     # ------------------------------------------------------------------
-    # Universal conversion
+    # Universal conversion (with structural scan inference)
     # ------------------------------------------------------------------
     def to_universal(self, raw: str, metadata: Mapping[str, Any]) -> Dict[str, Any]:
         try:
-            x_vals = []
-            y_vals = []
+            x_vals: List[float] = []
+            y_vals: List[float] = []
+            tabular: List[Dict[str, float]] = []
 
+            # Parse JCAMP lines
             for line in raw.splitlines():
                 line = line.strip()
                 if not line or line.startswith("##"):
                     continue
 
+                # Replace commas with spaces, split into tokens
                 parts = line.replace(",", " ").split()
-                if len(parts) == 2:
-                    try:
-                        xv = float(parts[0])
-                        yv = float(parts[1])
-                        x_vals.append(xv)
-                        y_vals.append(yv)
-                    except ValueError:
-                        continue
+                if len(parts) != 2:
+                    continue
+
+                try:
+                    xv = float(parts[0])
+                    yv = float(parts[1])
+                except ValueError:
+                    continue
+
+                x_vals.append(xv)
+                y_vals.append(yv)
+                tabular.append({"x": xv, "y": yv})
+
+            scans: List[Scan] = []
+
+            # Structural rule: if x and y arrays are valid → one scan
+            if len(x_vals) == len(y_vals) and len(x_vals) > 0:
+                scans.append(
+                    Scan(
+                        x=x_vals,
+                        y=y_vals,
+                        label=metadata.get("title", "JCAMP Spectrum"),
+                    )
+                )
 
             return {
-                "x": x_vals,
-                "y": y_vals,
-                "label": metadata.get("title", "JCAMP Spectrum"),
+                "tabular": tabular,
+                "scans": scans,
+                "metadata": metadata,
             }
 
         except Exception as exc:
