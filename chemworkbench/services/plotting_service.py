@@ -29,7 +29,6 @@ from chemworkbench.plotting.engine import PlotEngine
 from chemworkbench.runtime.logging import get_logger
 from chemworkbench.runtime.errors import PipelineError
 
-
 logger = get_logger(__name__)
 
 
@@ -99,6 +98,13 @@ class PlottingService:
             try:
                 fig = self.engine.render(plot_cfg)
                 rendered.append(fig)
+
+                # ------------------------------------------------------
+                # DEBUG: Force GUI display for pipeline vetting
+                # ------------------------------------------------------
+                import matplotlib.pyplot as plt
+                plt.show(block=True)
+
             except Exception as exc:
                 raise PipelineError(
                     f"Plot rendering failed for plot {idx}: {exc}"
