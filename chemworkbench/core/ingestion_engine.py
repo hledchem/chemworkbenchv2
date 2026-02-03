@@ -7,7 +7,7 @@ Purpose
 The ingestion engine is the central orchestrator of the v2.2 data pipeline.
 It coordinates:
 
-    1. Structural format detection (FormatDetector)
+    1. Structural format detection (FormatDetectionEngine)
     2. Format resolution (FormatRegistry)
     3. Loader resolution (LoaderRegistry)
     4. Data loading (Loader → universal structure)
@@ -47,7 +47,7 @@ Public API
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Any, Mapping
+from typing import Optional, Any
 
 from chemworkbench.core.models import (
     RawDataBundle,
@@ -57,10 +57,13 @@ from chemworkbench.core.models import (
 )
 from chemworkbench.core.format_registry import FormatRegistry
 from chemworkbench.core.loader_registry import LoaderRegistry
-    # loader.load_raw(), loader.extract_metadata(), loader.to_universal()
 from chemworkbench.core.technique_detection_engine import TechniqueEngine
 from chemworkbench.core.routing import ProcessorRouter
-from chemworkbench.utils.file_sniffer.format_detection_engine import FormatDetector
+
+# Correct import path + correct class name
+from chemworkbench.utils.file_sniffer.format_detection_engine import (
+    FormatDetectionEngine,
+)
 
 
 # ======================================================================
@@ -73,7 +76,7 @@ class IngestionEngine:
 
     Responsibilities
     ----------------
-    • Detect structural format (FormatDetector)
+    • Detect structural format (FormatDetectionEngine)
     • Resolve loader (FormatRegistry + LoaderRegistry)
     • Load universal data (loader)
     • Convert universal → RawDataBundle
@@ -83,7 +86,7 @@ class IngestionEngine:
 
     Non-Responsibilities
     --------------------
-    • File sniffing heuristics (handled by FormatDetector)
+    • File sniffing heuristics (handled by FormatDetectionEngine)
     • Loader logic (handled by loader classes)
     • Technique inference logic (handled by TechniqueEngine)
     • Processing logic (handled by processors)
@@ -96,13 +99,13 @@ class IngestionEngine:
         loader_registry: LoaderRegistry,
         technique_engine: TechniqueEngine,
         processor_router: ProcessorRouter,
-        detector: Optional[FormatDetector] = None,
+        detector: Optional[FormatDetectionEngine] = None,
     ) -> None:
         self.format_registry = format_registry
         self.loader_registry = loader_registry
         self.technique_engine = technique_engine
         self.processor_router = processor_router
-        self.detector = detector or FormatDetector()
+        self.detector = detector or FormatDetectionEngine()
 
     # ------------------------------------------------------------------
     # Universal → RawDataBundle conversion
@@ -183,6 +186,7 @@ class IngestionEngine:
         # 4. Convert universal → RawDataBundle
         # --------------------------------------------------------------
         raw = self._to_rawdatabundle(universal, detected)
+        raw.source_path = str(path)
 
         # --------------------------------------------------------------
         # 5. Technique inference (anchor engine)
