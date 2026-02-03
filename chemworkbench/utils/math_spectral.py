@@ -7,12 +7,12 @@ LLM‑friendly commentary
 This module implements the canonical, technique‑agnostic spectral math
 utilities for ChemWorkBench v2.2. All functions are:
 
-    • pure (no mutation of inputs)
-    • stateless
-    • vectorized where possible
-    • processor‑agnostic
-    • technique‑agnostic
-    • reusable across UV‑Vis, IR, Raman, MS, NMR magnitude, etc.
+• pure (no mutation of inputs)
+• stateless
+• vectorized where possible
+• processor‑agnostic
+• technique‑agnostic
+• reusable across UV‑Vis, IR, Raman, MS, NMR magnitude, etc.
 
 Responsibilities:
 - provide universal 1D spectral transforms (baseline, smoothing, normalization)
@@ -29,8 +29,9 @@ Non‑responsibilities:
 from __future__ import annotations
 
 from typing import Sequence, Tuple, Optional, Dict, Any
+
 import numpy as np
-from numpy.lib import integrate  # NumPy 2.0‑safe trapezoidal integration
+from numpy import trapezoid   # NumPy 2.0‑safe trapezoidal integration
 
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
@@ -45,12 +46,9 @@ def baseline_polynomial(
     y: Sequence[float],
     order: int = 3,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Polynomial baseline fitting.
-    """
+    """Polynomial baseline fitting."""
     x_arr = np.asarray(x)
     y_arr = np.asarray(y)
-
     coeffs = np.polyfit(x_arr, y_arr, deg=order)
     baseline = np.polyval(coeffs, x_arr)
     return x_arr, baseline
@@ -61,9 +59,7 @@ def baseline_rolling_min(
     y: Sequence[float],
     window: int = 51,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Rolling minimum baseline estimate.
-    """
+    """Rolling minimum baseline estimate."""
     x_arr = np.asarray(x)
     y_arr = np.asarray(y)
 
@@ -89,9 +85,7 @@ def baseline_rolling_quantile(
     window: int = 51,
     quantile: float = 0.1,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Rolling quantile baseline (e.g., 10th percentile).
-    """
+    """Rolling quantile baseline (e.g., 10th percentile)."""
     x_arr = np.asarray(x)
     y_arr = np.asarray(y)
 
@@ -119,9 +113,7 @@ def baseline_asls(
     p: float = 0.001,
     n_iter: int = 10,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Asymmetric least squares baseline (Eilers & Boelens).
-    """
+    """Asymmetric least squares baseline (Eilers & Boelens)."""
     x_arr = np.asarray(x)
     y_arr = np.asarray(y, dtype=float)
 
@@ -130,7 +122,6 @@ def baseline_asls(
     DTD = lam * (D @ D.T)
 
     w = np.ones(L)
-
     for _ in range(n_iter):
         W = sparse.diags(w, 0)
         Z = W + DTD
@@ -146,9 +137,7 @@ def baseline(
     method: str = "polynomial",
     **kwargs,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Unified baseline correction wrapper.
-    """
+    """Unified baseline correction wrapper."""
     method = method.lower()
 
     if method == "polynomial":
@@ -179,9 +168,7 @@ def smooth_moving_average(
     y: Sequence[float],
     window: int = 11,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Moving average smoothing.
-    """
+    """Moving average smoothing."""
     x_arr = np.asarray(x)
     y_arr = np.asarray(y)
 
@@ -201,9 +188,7 @@ def smooth_gaussian(
     y: Sequence[float],
     sigma: float = 1.0,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Gaussian smoothing using a discrete Gaussian kernel.
-    """
+    """Gaussian smoothing using a discrete Gaussian kernel."""
     x_arr = np.asarray(x)
     y_arr = np.asarray(y)
 
@@ -225,9 +210,7 @@ def smooth_savitzky_golay(
     window: int = 11,
     polyorder: int = 3,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Savitzky–Golay smoothing using a sliding polynomial fit.
-    """
+    """Savitzky–Golay smoothing using a sliding polynomial fit."""
     x_arr = np.asarray(x)
     y_arr = np.asarray(y)
 
@@ -265,9 +248,7 @@ def smooth(
     method: str = "moving_average",
     **kwargs,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Unified smoothing wrapper.
-    """
+    """Unified smoothing wrapper."""
     method = method.lower()
 
     if method == "moving_average":
@@ -288,9 +269,7 @@ def normalize_max(
     x: Sequence[float],
     y: Sequence[float],
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Normalize so that max(|y|) = 1.
-    """
+    """Normalize so that max(|y|) = 1."""
     x_arr = np.asarray(x)
     y_arr = np.asarray(y, dtype=float)
 
@@ -305,9 +284,7 @@ def normalize_min_max(
     x: Sequence[float],
     y: Sequence[float],
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Normalize to the [0, 1] range.
-    """
+    """Normalize to the [0, 1] range."""
     x_arr = np.asarray(x)
     y_arr = np.asarray(y, dtype=float)
 
@@ -326,12 +303,12 @@ def normalize_area(
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Normalize so that the area under the curve is 1.
-    Uses NumPy‑2.0‑safe trapezoidal integration.
+    NumPy‑2.0‑safe trapezoidal integration.
     """
     x_arr = np.asarray(x)
     y_arr = np.asarray(y, dtype=float)
 
-    area = float(integrate.trapezoid(y_arr, x_arr))
+    area = float(trapezoid(y_arr, x_arr))
     if area == 0:
         return x_arr, y_arr
 
@@ -344,9 +321,7 @@ def normalize(
     method: str = "max",
     **kwargs,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Unified normalization wrapper.
-    """
+    """Unified normalization wrapper."""
     method = method.lower()
 
     if method == "max":
@@ -390,7 +365,7 @@ def integrate_region(
     if not np.any(mask):
         return 0.0
 
-    return float(integrate.trapezoid(y_arr[mask], x_arr[mask]))
+    return float(trapezoid(y_arr[mask], x_arr[mask]))
 
 
 def integrate_regions(
@@ -398,9 +373,7 @@ def integrate_regions(
     y: Sequence[float],
     regions: Sequence[Tuple[float, float]],
 ) -> np.ndarray:
-    """
-    Integrate y over multiple x‑ranges.
-    """
+    """Integrate y over multiple x‑ranges."""
     x_arr = np.asarray(x, dtype=float)
     y_arr = np.asarray(y, dtype=float)
 
@@ -416,9 +389,7 @@ def integrate_regions(
 # ============================================================================
 
 class PeakDetectionResult:
-    """
-    Container for peak detection results.
-    """
+    """Container for peak detection results."""
 
     def __init__(
         self,
@@ -439,141 +410,3 @@ class PeakDetectionResult:
         self.refined_x = refined_x
         self.refined_y = refined_y
         self.metadata = metadata or {}
-
-
-def _apply_region(
-    x: np.ndarray,
-    y: np.ndarray,
-    x_min: Optional[float],
-    x_max: Optional[float],
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Apply an optional x‑range restriction.
-    """
-    if x_min is None and x_max is None:
-        mask = np.ones_like(x, dtype=bool)
-        return mask, x, y
-
-    mask = np.ones_like(x, dtype=bool)
-    if x_min is not None:
-        mask &= x >= x_min
-    if x_max is not None:
-        mask &= x <= x_max
-
-    return mask, x[mask], y[mask]
-
-
-def _find_local_maxima_indices(y: np.ndarray) -> np.ndarray:
-    """
-    Simple local maxima detection.
-    """
-    if len(y) < 3:
-        return np.array([], dtype=int)
-
-    left = y[1:-1] > y[:-2]
-    right = y[1:-1] > y[2:]
-    mask = left & right
-    return np.where(mask)[0] + 1
-
-
-def _filter_by_height(
-    indices: np.ndarray,
-    y: np.ndarray,
-    height: Optional[float],
-    rel_height: Optional[float],
-) -> np.ndarray:
-    """
-    Filter peaks by absolute and/or relative height.
-    """
-    if indices.size == 0:
-        return indices
-
-    y_peaks = y[indices]
-    mask = np.ones_like(indices, dtype=bool)
-
-    if height is not None:
-        mask &= y_peaks >= height
-
-    if rel_height is not None:
-        max_val = np.max(y)
-        mask &= y_peaks >= rel_height * max_val
-
-    return indices[mask]
-
-
-def _estimate_prominence(indices: np.ndarray, y: np.ndarray) -> np.ndarray:
-    """
-    Simple prominence estimate.
-    """
-    if indices.size == 0:
-        return np.array([], dtype=float)
-
-    n = len(y)
-    prominence = np.zeros_like(indices, dtype=float)
-
-    for i, idx in enumerate(indices):
-        left_min = y[idx]
-        j = idx
-        while j > 0 and y[j] <= y[j - 1]:
-            left_min = min(left_min, y[j - 1])
-            j -= 1
-
-        right_min = y[idx]
-        j = idx
-        while j < n - 1 and y[j] <= y[j + 1]:
-            right_min = min(right_min, y[j + 1])
-            j += 1
-
-        baseline_level = min(left_min, right_min)
-        prominence[i] = y[idx] - baseline_level
-
-    return prominence
-
-
-def _filter_by_prominence(
-    indices: np.ndarray,
-    y: np.ndarray,
-    min_prominence: Optional[float],
-) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-    """
-    Filter peaks by minimum prominence.
-    """
-    if indices.size == 0:
-        return indices, None
-
-    prominence = _estimate_prominence(indices, y)
-
-    if min_prominence is None:
-        return indices, prominence
-
-    mask = prominence >= min_prominence
-    return indices[mask], prominence[mask]
-
-
-def _estimate_widths(
-    indices: np.ndarray,
-    x: np.ndarray,
-    y: np.ndarray,
-    rel_height: float = 0.5,
-) -> np.ndarray:
-    """
-    Estimate peak widths at a relative height.
-    """
-    if indices.size == 0:
-        return np.array([], dtype=float)
-
-    n = len(y)
-    widths = np.zeros_like(indices, dtype=float)
-
-    for i, idx in enumerate(indices):
-        peak_y = y[idx]
-        target = peak_y * rel_height
-
-        j = idx
-        while j > 0 and y[j] > target:
-            j -= 1
-        x_left = x[j]
-
-        j = idx
-        while j < n - 1 and y[j] > target:
-            j += 1
