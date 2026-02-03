@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple
 
-from chemworkbench.core.models import Technique
+from chemworkbench.core.models import Technique, RawDataBundle
 from chemworkbench.core.technique_anchors import TECHNIQUE_ANCHORS
 from chemworkbench.utils.normalization import NormalizedFileInfo
 
@@ -189,9 +189,65 @@ def score(normalized: NormalizedFileInfo) -> TechniqueScore:
     # Fallback
     if best is None:
         best = TechniqueScore(
-            technique=Technique.UVVIS,
+            technique=Technique.UNKNOWN,
             score=0.0,
             reasons=["fallback: no anchors matched"],
         )
 
     return best
+
+
+# ======================================================================
+# TechniqueEngine wrapper (v2.2 canonical)
+# ======================================================================
+
+@dataclass
+class TechniqueResult:
+    technique: Technique
+    confidence: float
+    reasons: List[str]
+
+
+class TechniqueEngine:
+    """
+    Canonical v2.2 TechniqueEngine wrapper.
+
+    Bridges:
+        RawDataBundle  → NormalizedFileInfo → anchor scoring → TechniqueResult
+    """
+
+    def detect(self, raw: RawDataBundle, detected_format) -> TechniqueResult:
+        """
+        Main entrypoint used by IngestionEngine.
+
+        Steps:
+        1. Build a NormalizedFileInfo from the raw bundle + detected_format
+        2. Call the anchor scoring engine
+        3. Return a TechniqueResult
+        """
+
+        # Build token list from:
+        # - CSV headers
+        # - scan labels
+        tokens = []
+
+        # Tabular CSV headers
+        if raw.tabular and len(raw.tabular) > 0:
+            tokens.extend([k.lower() for k in raw.tabular[0].keys()])
+
+        # Scan labels
+        for scan in raw.scans:
+            tokens.append(scan.label.lower())
+
+        normalized = NormalizedFileInfo(
+            path=Path(raw.source_path) if raw.source_path else Path("unknown"),
+            tokens=tokens,
+        )
+
+        score_result = score(normalized)
+
+        return TechniqueResult(
+            technique=score_result.technique,
+            confidence=score_result.score,
+            reasons=score_result.reasons,
+        )
