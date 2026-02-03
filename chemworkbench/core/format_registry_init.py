@@ -17,13 +17,9 @@ Format Families (v2.2)
 • ascii
 • jcamp
 • nmr_dir
-• spc / spa / srs
+• spc
 • vendor_dir
 • jdf
-• raman_rruf
-• echem
-
-Each format_id corresponds to exactly one loader_key.
 
 Public API
 ----------
@@ -32,7 +28,7 @@ Public API
 
 from __future__ import annotations
 
-from .format_registry import FormatRegistry, FormatDescriptor
+from chemworkbench.core.format_registry import FormatRegistry, FormatDescriptor
 
 
 def build_default_format_registry() -> FormatRegistry:
@@ -54,14 +50,6 @@ def build_default_format_registry() -> FormatRegistry:
     # ================================================================
     reg.register(FormatDescriptor(
         id="generic_csv_headered",
-        family="csv",
-        vendor=None,
-        version=None,
-        loader_key="csv_loader",
-    ))
-
-    reg.register(FormatDescriptor(
-        id="generic_csv_no_header",
         family="csv",
         vendor=None,
         version=None,
@@ -109,41 +97,6 @@ def build_default_format_registry() -> FormatRegistry:
         loader_key="bruker_nmr_loader",
     ))
 
-    reg.register(FormatDescriptor(
-        id="varian_fid_dir",
-        family="nmr_dir",
-        vendor="varian",
-        version=None,
-        loader_key="varian_nmr_loader",
-    ))
-
-    # ================================================================
-    # THERMO SPC/SPA/SRS FAMILY
-    # ================================================================
-    reg.register(FormatDescriptor(
-        id="thermo_spc_binary",
-        family="spc",
-        vendor="thermo",
-        version=None,
-        loader_key="thermo_spc_loader",
-    ))
-
-    reg.register(FormatDescriptor(
-        id="thermo_spa_ascii",
-        family="spa",
-        vendor="thermo",
-        version=None,
-        loader_key="thermo_spa_loader",
-    ))
-
-    reg.register(FormatDescriptor(
-        id="thermo_srs_ascii",
-        family="srs",
-        vendor="thermo",
-        version=None,
-        loader_key="thermo_srs_loader",
-    ))
-
     # ================================================================
     # WATERS RAW DIRECTORY
     # ================================================================
@@ -167,44 +120,14 @@ def build_default_format_registry() -> FormatRegistry:
     ))
 
     # ================================================================
-    # AGILENT MASSHUNTER DIRECTORY (.D)
+    # THERMO SPC FAMILY
     # ================================================================
     reg.register(FormatDescriptor(
-        id="agilent_masshunter_dir",
-        family="vendor_dir",
-        vendor="agilent",
+        id="thermo_spc_binary",
+        family="spc",
+        vendor="thermo",
         version=None,
-        loader_key="agilent_masshunter_loader",
-    ))
-
-    # ================================================================
-    # RAMAN SPECIAL FORMATS (RRUF)
-    # ================================================================
-    reg.register(FormatDescriptor(
-        id="raman_rruf_ascii",
-        family="raman_rruf",
-        vendor=None,
-        version=None,
-        loader_key="rruf_loader",
-    ))
-
-    reg.register(FormatDescriptor(
-        id="raman_rruf_gzip",
-        family="raman_rruf",
-        vendor=None,
-        version=None,
-        loader_key="rruf_gz_loader",
-    ))
-
-    # ================================================================
-    # ELECTROCHEMISTRY SPECIAL FORMATS (CHI .dta)
-    # ================================================================
-    reg.register(FormatDescriptor(
-        id="chi_dta_ascii",
-        family="echem",
-        vendor="chi",
-        version=None,
-        loader_key="chi_dta_loader",
+        loader_key="thermo_spc_loader",
     ))
 
     return reg
