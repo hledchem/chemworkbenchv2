@@ -15,20 +15,19 @@ files. In v2.2, loaders are *format readers only*. They do not:
 
 All detection and classification happens *before* loaders run.
 
-The CSV loader simply reads a CSV file into a universal Python structure
-(list‑of‑dicts). Processors interpret the meaning of the data after the
-anchor engine has selected the correct technique.
-
-This file is intentionally small, deterministic, and easy for both humans
-and LLMs to maintain.
+The CSV loader reads a CSV file into a universal Python structure
+(list‑of‑dicts) and performs *structural* scan inference when the table
+represents one or more numeric spectra. This is technique‑agnostic and
+purely structural.
 """
 
 from __future__ import annotations
 
 import csv
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, List, Dict
 
+from chemworkbench.core.models import Scan
 from chemworkbench.utils.loaders.base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -48,6 +47,7 @@ class CSVLoader(BaseVendorLoader):
     Responsibilities:
     - Read CSV files safely and deterministically
     - Produce a universal structure (list‑of‑dicts)
+    - Infer *structural* scans when the table is numeric
     - Extract minimal structural metadata
     - Raise structured loader errors
 
@@ -65,17 +65,12 @@ class CSVLoader(BaseVendorLoader):
     # ------------------------------------------------------------------
     # sniff(path)
     # ------------------------------------------------------------------
-    # v2.2 rule: sniffing is *format‑only*. Loaders do not sniff technique.
-    # ------------------------------------------------------------------
     def sniff(self, path: Path) -> bool:
         path = Path(path)
         return path.suffix.lower() == ".csv"
 
     # ------------------------------------------------------------------
     # load_raw(path)
-    # ------------------------------------------------------------------
-    # Reads the CSV file and returns a list‑of‑dicts.
-    # This is the only I/O‑heavy part of the loader.
     # ------------------------------------------------------------------
     def load_raw(self, path: Path) -> Any:
         try:
@@ -89,8 +84,6 @@ class CSVLoader(BaseVendorLoader):
 
     # ------------------------------------------------------------------
     # extract_metadata(raw_data)
-    # ------------------------------------------------------------------
-    # Returns minimal structural metadata. No technique or vendor logic.
     # ------------------------------------------------------------------
     def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
         try:
@@ -108,12 +101,96 @@ class CSVLoader(BaseVendorLoader):
     # ------------------------------------------------------------------
     # to_universal(raw_data, metadata)
     # ------------------------------------------------------------------
-    # v2.2 rule: loaders output a universal structure that processors
-    # can interpret. For CSV, this is simply the list‑of‑dicts.
+    # Adds structural scan inference while preserving tabular output.
     # ------------------------------------------------------------------
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
-            return raw_data
+            # Always preserve tabular rows
+            tabular = raw_data
+
+            scans: List[Scan] = []
+
+            if not raw_data:
+                return {"tabular": tabular, "scans": scans}
+
+            # Extract headers
+            headers = list(raw_data[0].keys())
+            num_cols = len(headers)
+
+            # Convert columns to numeric arrays when possible
+            columns: List[List[float]] = []
+            numeric_mask: List[bool] = []
+
+            for h in headers:
+                col = []
+                is_numeric = True
+                for row in raw_data:
+                    val = row.get(h, "").strip()
+                    try:
+                        col.append(float(val))
+                    except Exception:
+                        is_numeric = False
+                        break
+                numeric_mask.append(is_numeric)
+                columns.append(col if is_numeric else [])
+
+            # If fewer than 2 numeric columns → no scans
+            numeric_indices = [i for i, ok in enumerate(numeric_mask) if ok]
+            if len(numeric_indices) < 2:
+                return {"tabular": tabular, "scans": scans}
+
+            # ------------------------------------------------------------------
+            # Structural scan inference rules (v2.2)
+            # ------------------------------------------------------------------
+
+            # Case A: exactly 2 numeric columns → one scan
+            if len(numeric_indices) == 2:
+                xi, yi = numeric_indices
+                x = columns[xi]
+                y = columns[yi]
+                if len(x) == len(y):
+                    scans.append(
+                        Scan(
+                            x=x,
+                            y=y,
+                            label=f"{headers[yi]} vs {headers[xi]}",
+                        )
+                    )
+                return {"tabular": tabular, "scans": scans}
+
+            # Case B: even number of numeric columns → paired scans (x1,y1,x2,y2,...)
+            if len(numeric_indices) % 2 == 0:
+                for i in range(0, len(numeric_indices), 2):
+                    xi = numeric_indices[i]
+                    yi = numeric_indices[i + 1]
+                    x = columns[xi]
+                    y = columns[yi]
+                    if len(x) == len(y):
+                        scans.append(
+                            Scan(
+                                x=x,
+                                y=y,
+                                label=f"{headers[yi]} vs {headers[xi]}",
+                            )
+                        )
+                return {"tabular": tabular, "scans": scans}
+
+            # Case C: first numeric column is x, remaining are y-columns
+            x_index = numeric_indices[0]
+            x = columns[x_index]
+            for yi in numeric_indices[1:]:
+                y = columns[yi]
+                if len(x) == len(y):
+                    scans.append(
+                        Scan(
+                            x=x,
+                            y=y,
+                            label=f"{headers[yi]} vs {headers[x_index]}",
+                        )
+                    )
+
+            return {"tabular": tabular, "scans": scans}
+
         except Exception as exc:
             raise LoaderNormalizationError(
                 f"Failed to normalize CSV data: {exc}"
