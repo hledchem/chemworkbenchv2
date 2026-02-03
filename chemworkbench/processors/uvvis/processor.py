@@ -53,17 +53,6 @@ from .config import UVVisConfig
 class UVVisProcessor(BaseProcessor):
     """
     Block‑based UV‑Vis processor.
-
-    Responsibilities:
-        • Run a configurable pipeline of processing blocks.
-        • Support single‑scan and multi‑scan workflows.
-        • Produce plots + metadata for scientific interpretation.
-
-    Non‑Responsibilities:
-        • File I/O
-        • Structural format detection
-        • Technique detection
-        • Loader logic
     """
 
     # ==================================================================
@@ -74,7 +63,6 @@ class UVVisProcessor(BaseProcessor):
         scans = raw.scans
         n = len(scans)
 
-        # No scans → return empty but valid ProcessedData
         if n == 0:
             return ProcessedData(
                 technique=raw.technique,
@@ -84,11 +72,9 @@ class UVVisProcessor(BaseProcessor):
                 plots=[],
             )
 
-        # Single scan
         if n == 1:
             return self._process_single(scans[0], config, raw.technique)
 
-        # Multi‑scan
         return self._process_multi(scans, config, raw.technique)
 
     # ==================================================================
@@ -120,12 +106,16 @@ class UVVisProcessor(BaseProcessor):
         # Final processed spectrum plot
         plots.append(
             PlotConfig(
+                type="line",
                 title=scan.label or "UV‑Vis Spectrum",
+                label=scan.label or "UV‑Vis Spectrum",
                 x=x.tolist(),
                 y=y.tolist(),
-                xlabel="Wavelength (nm)",
-                ylabel="Absorbance (AU)",
-                style="line",
+                style={},
+                metadata={
+                    "xlabel": "Wavelength (nm)",
+                    "ylabel": "Absorbance (AU)",
+                },
             )
         )
 
@@ -148,22 +138,20 @@ class UVVisProcessor(BaseProcessor):
 
         processed_scans: List[ProcessedData] = []
 
-        # Process each scan individually
         for scan in scans:
             processed = self._process_single(scan, config, technique)
             processed_scans.append(processed)
+            plots.extend(processed.plots)
 
-        # Overlay plot
         overlay = self._block_overlay(scans, processed_scans)
-        plots.append(overlay)
+        if overlay is not None:
+            plots.append(overlay)
 
-        # Difference spectrum
         diff_plot, diff_meta = self._block_difference(processed_scans)
         if diff_plot is not None:
             plots.append(diff_plot)
             metadata.update(diff_meta)
 
-        # Multi‑scan metrics
         multi_meta = self._block_multi_metrics(processed_scans)
         metadata.update(multi_meta)
 
@@ -181,7 +169,6 @@ class UVVisProcessor(BaseProcessor):
     def _block_baseline(
         self, x: np.ndarray, y: np.ndarray, config: UVVisConfig
     ) -> Tuple[np.ndarray, np.ndarray, Dict[str, Any], Dict[str, Any]]:
-
         meta: Dict[str, Any] = {}
         payload: Dict[str, Any] = {}
 
@@ -194,27 +181,26 @@ class UVVisProcessor(BaseProcessor):
             coeffs = np.polyfit(x, y, order)
             baseline = np.polyval(coeffs, x)
             y = y - baseline
-            meta.update({"baseline_method": "polynomial", "baseline_order": order})
+            meta["baseline_method"] = "polynomial"
+            meta["baseline_order"] = order
 
         elif method == "quantile":
             window = max(3, config.baseline_window)
             q = config.baseline_quantile
             baseline = self._rolling_quantile(y, window, q)
             y = y - baseline
-            meta.update(
-                {
-                    "baseline_method": "quantile",
-                    "baseline_window": window,
-                    "baseline_quantile": q,
-                }
-            )
+            meta["baseline_method"] = "quantile"
+            meta["baseline_window"] = window
+            meta["baseline_quantile"] = q
 
         elif method == "als":
             lam = config.baseline_lam
             p = config.baseline_p
             baseline = self._als_baseline(y, lam=lam, p=p)
             y = y - baseline
-            meta.update({"baseline_method": "als", "baseline_lam": lam, "baseline_p": p})
+            meta["baseline_method"] = "als"
+            meta["baseline_lam"] = lam
+            meta["baseline_p"] = p
 
         payload["baseline_applied"] = True
         return x, y, meta, payload
@@ -225,7 +211,6 @@ class UVVisProcessor(BaseProcessor):
     def _block_smoothing(
         self, x: np.ndarray, y: np.ndarray, config: UVVisConfig
     ) -> Tuple[np.ndarray, np.ndarray, Dict[str, Any], Dict[str, Any]]:
-
         meta: Dict[str, Any] = {}
         payload: Dict[str, Any] = {}
 
@@ -240,18 +225,15 @@ class UVVisProcessor(BaseProcessor):
         if method == "moving_average":
             kernel = np.ones(window) / window
             y = np.convolve(y, kernel, mode="same")
-            meta.update({"smoothing_method": "moving_average", "smoothing_window": window})
+            meta["smoothing_method"] = "moving_average"
+            meta["smoothing_window"] = window
 
         elif method == "savgol":
             polyorder = min(config.smoothing_polyorder, window - 1)
             y = savgol_filter(y, window_length=window, polyorder=polyorder)
-            meta.update(
-                {
-                    "smoothing_method": "savgol",
-                    "smoothing_window": window,
-                    "smoothing_polyorder": polyorder,
-                }
-            )
+            meta["smoothing_method"] = "savgol"
+            meta["smoothing_window"] = window
+            meta["smoothing_polyorder"] = polyorder
 
         elif method == "gaussian":
             sigma = max(1e-6, config.smoothing_sigma)
@@ -262,7 +244,8 @@ class UVVisProcessor(BaseProcessor):
             kernel = np.exp(-0.5 * (xs / sigma) ** 2)
             kernel /= kernel.sum()
             y = np.convolve(y, kernel, mode="same")
-            meta.update({"smoothing_method": "gaussian", "smoothing_sigma": sigma})
+            meta["smoothing_method"] = "gaussian"
+            meta["smoothing_sigma"] = sigma
 
         payload["smoothing_applied"] = True
         return x, y, meta, payload
@@ -273,7 +256,6 @@ class UVVisProcessor(BaseProcessor):
     def _block_normalization(
         self, x: np.ndarray, y: np.ndarray, config: UVVisConfig
     ) -> Tuple[np.ndarray, np.ndarray, Dict[str, Any], Dict[str, Any]]:
-
         meta: Dict[str, Any] = {}
         payload: Dict[str, Any] = {}
 
@@ -284,17 +266,20 @@ class UVVisProcessor(BaseProcessor):
         if method == "max":
             max_val = float(np.max(np.abs(y))) or 1.0
             y = y / max_val
-            meta.update({"normalization_method": "max", "normalization_factor": max_val})
+            meta["normalization_method"] = "max"
+            meta["normalization_factor"] = max_val
 
         elif method == "area":
             area = float(np.trapz(y, x)) or 1.0
             y = y / area
-            meta.update({"normalization_method": "area", "normalization_factor": area})
+            meta["normalization_method"] = "area"
+            meta["normalization_factor"] = area
 
         elif method == "vector":
             norm = float(np.linalg.norm(y)) or 1.0
             y = y / norm
-            meta.update({"normalization_method": "vector", "normalization_factor": norm})
+            meta["normalization_method"] = "vector"
+            meta["normalization_factor"] = norm
 
         payload["normalization_applied"] = True
         return x, y, meta, payload
@@ -305,7 +290,6 @@ class UVVisProcessor(BaseProcessor):
     def _block_peak_detection(
         self, x: np.ndarray, y: np.ndarray, config: UVVisConfig
     ) -> Tuple[np.ndarray, np.ndarray, Dict[str, Any], Dict[str, Any]]:
-
         meta: Dict[str, Any] = {}
         payload: Dict[str, Any] = {}
 
@@ -316,13 +300,9 @@ class UVVisProcessor(BaseProcessor):
         lambda_max = float(x[idx_max])
         abs_max = float(y[idx_max])
 
-        meta.update(
-            {
-                "lambda_max": lambda_max,
-                "abs_max": abs_max,
-                "peak_method": config.peak_method,
-            }
-        )
+        meta["lambda_max"] = lambda_max
+        meta["abs_max"] = abs_max
+        meta["peak_method"] = config.peak_method
         payload["peaks_detected"] = True
 
         return x, y, meta, payload
@@ -333,7 +313,6 @@ class UVVisProcessor(BaseProcessor):
     def _block_integration(
         self, x: np.ndarray, y: np.ndarray, config: UVVisConfig
     ) -> Tuple[np.ndarray, np.ndarray, Dict[str, Any], Dict[str, Any]]:
-
         meta: Dict[str, Any] = {}
         payload: Dict[str, Any] = {}
 
@@ -364,7 +343,6 @@ class UVVisProcessor(BaseProcessor):
     def _block_single_metrics(
         self, x: np.ndarray, y: np.ndarray, config: UVVisConfig
     ) -> Tuple[np.ndarray, np.ndarray, Dict[str, Any], Dict[str, Any]]:
-
         meta = {
             "y_min": float(np.min(y)),
             "y_max": float(np.max(y)),
@@ -377,21 +355,17 @@ class UVVisProcessor(BaseProcessor):
     # ==================================================================
     def _block_overlay(
         self, scans, processed_scans: List[ProcessedData]
-    ) -> PlotConfig:
+    ) -> Optional[PlotConfig]:
 
-        overlay = PlotConfig(
-            title="UV‑Vis Overlay",
-            xlabel="Wavelength (nm)",
-            ylabel="Absorbance (AU)",
-            style="line",
-            layers=[],
-        )
+        layers = []
 
         for idx, (scan, proc) in enumerate(zip(scans, processed_scans), start=1):
             if not proc.plots:
                 continue
             p = proc.plots[0]
-            overlay.layers.append(
+            if p.x is None or p.y is None:
+                continue
+            layers.append(
                 {
                     "x": p.x,
                     "y": p.y,
@@ -399,7 +373,22 @@ class UVVisProcessor(BaseProcessor):
                 }
             )
 
-        return overlay
+        if not layers:
+            return None
+
+        return PlotConfig(
+            type="line",
+            title="UV‑Vis Overlay",
+            label="overlay",
+            x=None,
+            y=None,
+            style={},
+            metadata={
+                "layers": layers,
+                "xlabel": "Wavelength (nm)",
+                "ylabel": "Absorbance (AU)",
+            },
+        )
 
     # ==================================================================
     # Blocks: Difference Spectrum
@@ -407,7 +396,6 @@ class UVVisProcessor(BaseProcessor):
     def _block_difference(
         self, processed_scans: List[ProcessedData]
     ) -> Tuple[Optional[PlotConfig], Dict[str, Any]]:
-
         meta: Dict[str, Any] = {}
 
         if len(processed_scans) < 2:
@@ -415,6 +403,9 @@ class UVVisProcessor(BaseProcessor):
 
         first = processed_scans[0].plots[0]
         last = processed_scans[-1].plots[0]
+
+        if first.x is None or first.y is None or last.x is None or last.y is None:
+            return None, meta
 
         x = np.array(first.x, dtype=float)
         y1 = np.array(first.y, dtype=float)
@@ -426,12 +417,16 @@ class UVVisProcessor(BaseProcessor):
         diff = (y2 - y1).tolist()
 
         plot = PlotConfig(
+            type="line",
             title="Difference Spectrum (Last − First)",
+            label="difference",
             x=x.tolist(),
             y=diff,
-            xlabel="Wavelength (nm)",
-            ylabel="ΔAbsorbance (AU)",
-            style="line",
+            style={},
+            metadata={
+                "xlabel": "Wavelength (nm)",
+                "ylabel": "ΔAbsorbance (AU)",
+            },
         )
 
         return plot, meta
@@ -442,7 +437,6 @@ class UVVisProcessor(BaseProcessor):
     def _block_multi_metrics(
         self, processed_scans: List[ProcessedData]
     ) -> Dict[str, Any]:
-
         meta: Dict[str, Any] = {}
 
         if len(processed_scans) < 2:
@@ -452,17 +446,23 @@ class UVVisProcessor(BaseProcessor):
         last_meta = processed_scans[-1].metadata
 
         if "lambda_max" in first_meta and "lambda_max" in last_meta:
-            meta["lambda_max_shift"] = last_meta["lambda_max"] - first_meta["lambda_max"]
+            meta["lambda_max_shift"] = (
+                last_meta["lambda_max"] - first_meta["lambda_max"]
+            )
 
         if "abs_max" in first_meta and "abs_max" in last_meta:
-            meta["delta_abs_max"] = last_meta["abs_max"] - first_meta["abs_max"]
+            meta["delta_abs_max"] = (
+                last_meta["abs_max"] - first_meta["abs_max"]
+            )
 
         return meta
 
     # ==================================================================
     # Helper: Rolling Quantile Baseline
     # ==================================================================
-    def _rolling_quantile(self, y: np.ndarray, window: int, q: float) -> np.ndarray:
+    def _rolling_quantile(
+        self, y: np.ndarray, window: int, q: float
+    ) -> np.ndarray:
         n = len(y)
         half = window // 2
         baseline = np.zeros_like(y)
@@ -480,7 +480,6 @@ class UVVisProcessor(BaseProcessor):
     def _als_baseline(
         self, y: np.ndarray, lam: float = 1e5, p: float = 0.001, niter: int = 10
     ) -> np.ndarray:
-
         L = len(y)
         D = np.diff(np.eye(L), 2)
         DTD = lam * (D.T @ D)
