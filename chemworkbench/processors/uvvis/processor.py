@@ -39,7 +39,7 @@ from __future__ import annotations
 from typing import List, Dict, Any, Tuple, Optional
 
 import numpy as np
-from numpy import integrate  # NumPy 2.0‑safe trapezoidal integration
+from numpy.lib import integrate  # NumPy 2.0‑safe trapezoidal integration
 
 from scipy.signal import savgol_filter
 
