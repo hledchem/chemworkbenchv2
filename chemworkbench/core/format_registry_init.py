@@ -4,10 +4,9 @@ ChemWorkBench v2.2 — Default Format Registry Initialization
 
 Purpose
 -------
-This module registers all *built-in* structural data formats supported by
-ChemWorkBench v2.2. These formats represent structural families, not
-techniques or vendors, and map directly to loader keys used by the
-LoaderRegistry.
+Registers all *built-in* structural data formats supported by ChemWorkBench v2.2.
+These formats represent structural families, not techniques or vendors, and map
+directly to loader keys used by the LoaderRegistry.
 
 This file is intentionally explicit, deterministic, and LLM-friendly.
 
@@ -87,47 +86,47 @@ def build_default_format_registry() -> FormatRegistry:
     ))
 
     # ================================================================
-    # NMR DIRECTORY FORMATS
+    # NMR DIRECTORY FORMATS (DISABLED FOR NOW)
     # ================================================================
-    reg.register(FormatDescriptor(
-        id="bruker_nmr_dir",
-        family="nmr_dir",
-        vendor="bruker",
-        version=None,
-        loader_key="bruker_nmr_loader",
-    ))
+    # reg.register(FormatDescriptor(
+    #     id="bruker_nmr_dir",
+    #     family="nmr_dir",
+    #     vendor="bruker",
+    #     version=None,
+    #     loader_key="bruker_nmr_loader",
+    # ))
 
     # ================================================================
-    # WATERS RAW DIRECTORY
+    # WATERS RAW DIRECTORY (DISABLED FOR NOW)
     # ================================================================
-    reg.register(FormatDescriptor(
-        id="waters_raw_dir",
-        family="vendor_dir",
-        vendor="waters",
-        version=None,
-        loader_key="waters_raw_loader",
-    ))
+    # reg.register(FormatDescriptor(
+    #     id="waters_raw_dir",
+    #     family="vendor_dir",
+    #     vendor="waters",
+    #     version=None,
+    #     loader_key="waters_raw_loader",
+    # ))
 
     # ================================================================
-    # JEOL JDF FAMILY
+    # JEOL JDF FAMILY (DISABLED FOR NOW)
     # ================================================================
-    reg.register(FormatDescriptor(
-        id="jeol_jdf_binary",
-        family="jdf",
-        vendor="jeol",
-        version=None,
-        loader_key="jeol_jdf_loader",
-    ))
+    # reg.register(FormatDescriptor(
+    #     id="jeol_jdf_binary",
+    #     family="jdf",
+    #     vendor="jeol",
+    #     version=None,
+    #     loader_key="jeol_jdf_loader",
+    # ))
 
     # ================================================================
-    # THERMO SPC FAMILY
+    # THERMO SPC FAMILY (DISABLED FOR NOW)
     # ================================================================
-    reg.register(FormatDescriptor(
-        id="thermo_spc_binary",
-        family="spc",
-        vendor="thermo",
-        version=None,
-        loader_key="thermo_spc_loader",
-    ))
+    # reg.register(FormatDescriptor(
+    #     id="thermo_spc_binary",
+    #     family="spc",
+    #     vendor="thermo",
+    #     version=None,
+    #     loader_key="thermo_spc_loader",
+    # ))
 
     return reg
