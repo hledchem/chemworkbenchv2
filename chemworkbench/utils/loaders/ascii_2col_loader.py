@@ -13,6 +13,7 @@ columns into a universal structure.
 Responsibilities:
 - Read two‑column ASCII files safely and deterministically
 - Produce a universal structure: list‑of‑dicts with keys "x" and "y"
+- Infer a structural Scan object (technique‑agnostic)
 - Extract minimal structural metadata
 - Raise structured loader errors
 
@@ -27,8 +28,9 @@ Non‑responsibilities:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, List, Dict
 
+from chemworkbench.core.models import Scan
 from chemworkbench.utils.loaders.base_loader import (
     BaseVendorLoader,
     LoaderReadError,
@@ -61,16 +63,13 @@ class ASCII2ColLoader(BaseVendorLoader):
     # ------------------------------------------------------------------
     # sniff(path)
     # ------------------------------------------------------------------
-    # v2.2 rule: sniffing is format‑only. Loaders do not sniff technique.
-    # ------------------------------------------------------------------
     def sniff(self, path: Path) -> bool:
-        # Very light sniff: check extension only.
         return path.suffix.lower() in self.EXTENSIONS
 
     # ------------------------------------------------------------------
     # load_raw(path)
     # ------------------------------------------------------------------
-    # Reads the file and returns a list‑of‑dicts: [{"x": float, "y": float}, ...]
+    # Returns list-of-dicts: [{"x": float, "y": float}, ...]
     # ------------------------------------------------------------------
     def load_raw(self, path: Path) -> Any:
         rows = []
@@ -111,9 +110,38 @@ class ASCII2ColLoader(BaseVendorLoader):
     # ------------------------------------------------------------------
     # to_universal(raw_data, metadata)
     # ------------------------------------------------------------------
+    # Adds structural scan inference while preserving the original rows.
+    # ------------------------------------------------------------------
     def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
         try:
-            return raw_data
+            # Preserve original row structure
+            tabular = raw_data
+
+            scans: List[Scan] = []
+
+            if not raw_data:
+                return {"tabular": tabular, "scans": scans}
+
+            # Extract x and y arrays
+            try:
+                x = [row["x"] for row in raw_data]
+                y = [row["y"] for row in raw_data]
+            except Exception:
+                # If structure is malformed, return tabular only
+                return {"tabular": tabular, "scans": scans}
+
+            # Structural rule: if x and y are numeric and same length → one scan
+            if len(x) == len(y) and len(x) > 0:
+                scans.append(
+                    Scan(
+                        x=x,
+                        y=y,
+                        label="scan_1",
+                    )
+                )
+
+            return {"tabular": tabular, "scans": scans}
+
         except Exception as exc:
             raise LoaderNormalizationError(
                 f"Failed to normalize two‑column ASCII data: {exc}"
