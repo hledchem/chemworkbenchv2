@@ -22,26 +22,25 @@ from chemworkbench.utils.loaders.ascii_multicol_loader import ASCIIMultiColLoade
 from chemworkbench.utils.loaders.jcamp_loader import JCAMPDXLoader
 
 # ----------------------------------------------------------------------
-# NMR LOADERS
+# NMR LOADERS (DISABLED FOR NOW)
 # ----------------------------------------------------------------------
-from chemworkbench.utils.loaders.bruker_nmr_loader import BrukerNMRLoader
-# If you have Varian, uncomment:
+# from chemworkbench.utils.loaders.bruker_nmr_loader import BrukerNMRLoader
 # from chemworkbench.utils.loaders.varian_nmr_loader import VarianNMRLoader
 
 # ----------------------------------------------------------------------
-# THERMO LOADERS (SPC)
+# THERMO LOADERS (DISABLED FOR NOW)
 # ----------------------------------------------------------------------
-from chemworkbench.utils.loaders.thermo_spc_loader import ThermoSPCLoader
+# from chemworkbench.utils.loaders.thermo_spc_loader import ThermoSPCLoader
 
 # ----------------------------------------------------------------------
-# WATERS RAW DIRECTORY
+# WATERS RAW DIRECTORY (DISABLED FOR NOW)
 # ----------------------------------------------------------------------
-from chemworkbench.utils.loaders.waters_raw_loader import WatersRAWLoader
+# from chemworkbench.utils.loaders.waters_raw_loader import WatersRAWLoader
 
 # ----------------------------------------------------------------------
-# JEOL JDF
+# JEOL JDF (DISABLED FOR NOW)
 # ----------------------------------------------------------------------
-from chemworkbench.utils.loaders.jeol_jdf_loader import JEOLJDFLoader
+# from chemworkbench.utils.loaders.jeol_jdf_loader import JEOLJDFLoader
 
 
 # ======================================================================
@@ -70,24 +69,24 @@ def build_default_loader_registry() -> LoaderRegistry:
     reg.register("jcamp_loader", JCAMPDXLoader)
 
     # ================================================================
-    # NMR LOADERS
+    # NMR LOADERS (DISABLED)
     # ================================================================
-    reg.register("bruker_nmr_loader", BrukerNMRLoader)
+    # reg.register("bruker_nmr_loader", BrukerNMRLoader)
     # reg.register("varian_nmr_loader", VarianNMRLoader)
 
     # ================================================================
-    # THERMO LOADERS
+    # THERMO LOADERS (DISABLED)
     # ================================================================
-    reg.register("thermo_spc_loader", ThermoSPCLoader)
+    # reg.register("thermo_spc_loader", ThermoSPCLoader)
 
     # ================================================================
-    # WATERS RAW DIRECTORY
+    # WATERS RAW DIRECTORY (DISABLED)
     # ================================================================
-    reg.register("waters_raw_loader", WatersRAWLoader)
+    # reg.register("waters_raw_loader", WatersRAWLoader)
 
     # ================================================================
-    # JEOL JDF
+    # JEOL JDF (DISABLED)
     # ================================================================
-    reg.register("jeol_jdf_loader", JEOLJDFLoader)
+    # reg.register("jeol_jdf_loader", JEOLJDFLoader)
 
     return reg
