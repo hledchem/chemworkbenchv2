@@ -28,7 +28,28 @@ from typing import List, Tuple
 
 from chemworkbench.core.models import Technique, RawDataBundle
 from chemworkbench.core.technique_anchors import TECHNIQUE_ANCHORS
-from chemworkbench.utils.normalization import NormalizedFileInfo
+
+
+# ======================================================================
+# NormalizedFileInfo (v2.2 canonical)
+# ======================================================================
+
+class NormalizedFileInfo:
+    """
+    v2.2 normalized file descriptor used by the TechniqueEngine.
+
+    Provides:
+        • path      — Path to the source file
+        • tokens    — list of lowercase strings extracted from headers, labels, etc.
+        • headers   — optional list of column headers (may be empty)
+        • extra     — optional dict for future extensibility
+    """
+
+    def __init__(self, path, tokens, headers=None, extra=None):
+        self.path = path
+        self.tokens = tokens or []
+        self.headers = headers or []
+        self.extra = extra or {}
 
 
 # ======================================================================
@@ -98,8 +119,6 @@ def _score_negative_markers(tokens: List[str], patterns) -> Tuple[float, List[st
 def _tokens_from_path(path: Path) -> List[str]:
     """
     Derive simple path tokens (directory names, stem) for structural anchors.
-    These are NOT the same as canonical header tokens, but are still
-    normalized to lowercase for matching against anchor patterns.
     """
     parts: List[str] = []
 
@@ -122,15 +141,6 @@ def score(normalized: NormalizedFileInfo) -> TechniqueScore:
     score(normalized) → TechniqueScore
 
     Main entrypoint for the Technique DetectionEngine.
-
-    Responsibilities:
-    - compute a score for each Technique using TECHNIQUE_ANCHORS
-    - return the best TechniqueScore (technique, score, reasons)
-
-    Notes:
-    - This engine does NOT select loaders or formats.
-    - This engine does NOT inspect raw bytes.
-    - This engine does NOT interpret scientific meaning beyond anchors.
     """
     tokens = normalized.tokens
     path_tokens = _tokens_from_path(normalized.path)
@@ -219,11 +229,6 @@ class TechniqueEngine:
     def detect(self, raw: RawDataBundle, detected_format) -> TechniqueResult:
         """
         Main entrypoint used by IngestionEngine.
-
-        Steps:
-        1. Build a NormalizedFileInfo from the raw bundle + detected_format
-        2. Call the anchor scoring engine
-        3. Return a TechniqueResult
         """
 
         # Build token list from:
