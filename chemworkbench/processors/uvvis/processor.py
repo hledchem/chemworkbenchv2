@@ -39,7 +39,7 @@ from __future__ import annotations
 from typing import List, Dict, Any, Tuple, Optional
 
 import numpy as np
-from numpy.lib import integrate  # NumPy 2.0‑safe trapezoidal integration
+from numpy import trapezoid   # NumPy 2.0‑safe trapezoidal integration
 
 from scipy.signal import savgol_filter
 
@@ -48,8 +48,8 @@ from chemworkbench.core.models import (
     ProcessedData,
     PlotConfig,
 )
-from chemworkbench.processors.base_processor import BaseProcessor
 
+from chemworkbench.processors.base_processor import BaseProcessor
 from .config import UVVisConfig
 
 
@@ -271,7 +271,7 @@ class UVVisProcessor(BaseProcessor):
 
         elif method == "area":
             # NumPy 2.0‑safe trapezoidal integration
-            area = float(integrate.trapezoid(y, x)) or 1.0
+            area = float(trapezoid(y, x)) or 1.0
             y = y / area
             meta["normalization_method"] = "area"
             meta["normalization_factor"] = area
@@ -329,7 +329,8 @@ class UVVisProcessor(BaseProcessor):
                 continue
 
             # NumPy 2.0‑safe trapezoidal integration
-            area = float(integrate.trapezoid(y[mask], x[mask]))
+            area = float(trapezoid(y[mask], x[mask]))
+
             areas.append(
                 {
                     "start_nm": float(start_nm),
