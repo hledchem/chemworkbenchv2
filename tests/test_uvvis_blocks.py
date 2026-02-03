@@ -40,7 +40,13 @@ def run_step(raw, config: UVVisConfig, description: str):
     router = ProcessorRouter()
     processor = router.resolve(raw.technique)
 
-    processed = processor.process(raw, config=config)
+    # IMPORTANT FIX:
+    # The processor does NOT accept config= in .process()
+    # So we call the correct internal method based on scan count.
+    if len(raw.scans) == 1:
+        processed = processor._process_single(raw.scans[0], config, raw.technique)
+    else:
+        processed = processor._process_multi(raw.scans, config, raw.technique)
 
     print("\n--- Enabled Blocks ---")
     for field, value in config.dict().items():
@@ -56,11 +62,11 @@ def run_step(raw, config: UVVisConfig, description: str):
         print(f"{k}: {v}")
 
     print("\n--- Plots ---")
-    plotter = PlottingService()   # NEW: instantiate plotting service
+    plotter = PlottingService()
 
     for i, plot in enumerate(processed.plots, start=1):
         print(f"Plot {i}: {plot.title} ({len(plot.x or [])} points)")
-        plotter.render([plot])    # NEW: render each plot
+        plotter.render([plot])
 
 
 def run_sequential_test(filepath: str):
@@ -152,7 +158,6 @@ def run_sequential_test(filepath: str):
 def test_uvvis_block_sequence():
     """
     Pytest wrapper for the sequential UV‑Vis block activation test.
-    This allows pytest to discover and run the test automatically.
     """
     test_file = "tests/synthetic_data/uvvis_synthetic_500nm.csv"
     run_sequential_test(test_file)
