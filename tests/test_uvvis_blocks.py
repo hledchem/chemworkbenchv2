@@ -145,6 +145,20 @@ def run_sequential_test(filepath: str):
     print("\n=== Sequential Test Complete ===\n")
 
 
+# ======================================================================
+# Pytest wrapper (NEW)
+# ======================================================================
+
+def test_uvvis_block_sequence():
+    """
+    Pytest wrapper for the sequential UV‑Vis block activation test.
+    This allows pytest to discover and run the test automatically.
+    """
+    test_file = "tests/synthetic_data/uvvis_synthetic_500nm.csv"
+    run_sequential_test(test_file)
+
+
+# Still runnable as a standalone script
 if __name__ == "__main__":
     test_file = "tests/synthetic_data/uvvis_synthetic_500nm.csv"
     run_sequential_test(test_file)
