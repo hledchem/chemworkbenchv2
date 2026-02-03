@@ -29,7 +29,7 @@ Processing model:
     For multiple scans:
         8. Overlay plot
         9. Difference spectrum
-       10. Multi‑scan metrics
+        10. Multi‑scan metrics
 
 All behavior is controlled by UVVisConfig.
 """
@@ -39,6 +39,8 @@ from __future__ import annotations
 from typing import List, Dict, Any, Tuple, Optional
 
 import numpy as np
+from numpy import integrate  # NumPy 2.0‑safe trapezoidal integration
+
 from scipy.signal import savgol_filter
 
 from chemworkbench.core.models import (
@@ -47,13 +49,12 @@ from chemworkbench.core.models import (
     PlotConfig,
 )
 from chemworkbench.processors.base_processor import BaseProcessor
+
 from .config import UVVisConfig
 
 
 class UVVisProcessor(BaseProcessor):
-    """
-    Block‑based UV‑Vis processor.
-    """
+    """Block‑based UV‑Vis processor."""
 
     # ==================================================================
     # Public entry point
@@ -135,7 +136,6 @@ class UVVisProcessor(BaseProcessor):
         metadata: Dict[str, Any] = {}
         qc: Dict[str, Any] = {}
         plots: List[PlotConfig] = []
-
         processed_scans: List[ProcessedData] = []
 
         for scan in scans:
@@ -150,7 +150,7 @@ class UVVisProcessor(BaseProcessor):
         diff_plot, diff_meta = self._block_difference(processed_scans)
         if diff_plot is not None:
             plots.append(diff_plot)
-            metadata.update(diff_meta)
+        metadata.update(diff_meta)
 
         multi_meta = self._block_multi_metrics(processed_scans)
         metadata.update(multi_meta)
@@ -270,7 +270,8 @@ class UVVisProcessor(BaseProcessor):
             meta["normalization_factor"] = max_val
 
         elif method == "area":
-            area = float(np.trapz(y, x)) or 1.0
+            # NumPy 2.0‑safe trapezoidal integration
+            area = float(integrate.trapezoid(y, x)) or 1.0
             y = y / area
             meta["normalization_method"] = "area"
             meta["normalization_factor"] = area
@@ -303,8 +304,8 @@ class UVVisProcessor(BaseProcessor):
         meta["lambda_max"] = lambda_max
         meta["abs_max"] = abs_max
         meta["peak_method"] = config.peak_method
-        payload["peaks_detected"] = True
 
+        payload["peaks_detected"] = True
         return x, y, meta, payload
 
     # ==================================================================
@@ -326,9 +327,15 @@ class UVVisProcessor(BaseProcessor):
             mask = (x >= start_nm) & (x <= end_nm)
             if not np.any(mask):
                 continue
-            area = float(np.trapz(y[mask], x[mask]))
+
+            # NumPy 2.0‑safe trapezoidal integration
+            area = float(integrate.trapezoid(y[mask], x[mask]))
             areas.append(
-                {"start_nm": float(start_nm), "end_nm": float(end_nm), "area": area}
+                {
+                    "start_nm": float(start_nm),
+                    "end_nm": float(end_nm),
+                    "area": area,
+                }
             )
 
         if areas:
@@ -356,15 +363,16 @@ class UVVisProcessor(BaseProcessor):
     def _block_overlay(
         self, scans, processed_scans: List[ProcessedData]
     ) -> Optional[PlotConfig]:
-
         layers = []
 
         for idx, (scan, proc) in enumerate(zip(scans, processed_scans), start=1):
             if not proc.plots:
                 continue
+
             p = proc.plots[0]
             if p.x is None or p.y is None:
                 continue
+
             layers.append(
                 {
                     "x": p.x,
