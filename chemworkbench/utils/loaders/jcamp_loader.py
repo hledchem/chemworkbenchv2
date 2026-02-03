@@ -1,4 +1,26 @@
-# utils/loaders/jcamp_loader.py
+"""
+ChemWorkBench v2.2 — JCAMP-DX Loader
+====================================
+
+Purpose
+-------
+A minimal, technique‑agnostic JCAMP‑DX loader that extracts paired x/y
+data from simple JCAMP files (.jdx, .dx). This loader is intentionally
+lightweight and deterministic, producing a universal structure compatible
+with the v2.2 ingestion engine.
+
+Universal Output Structure
+--------------------------
+{
+    "x": [...],
+    "y": [...],
+    "label": "JCAMP Spectrum"
+}
+
+This loader does *not* attempt to interpret multi-block JCAMP, derivative
+tables, or vendor‑specific extensions. It is designed for robust ingestion
+of simple UV‑Vis, IR, Raman, and general spectral JCAMP files.
+"""
 
 from __future__ import annotations
 
@@ -13,86 +35,88 @@ from .base_loader import (
 )
 
 
-class JCAMPLoader(BaseVendorLoader):
+class JCAMPDXLoader(BaseVendorLoader):
     """
-    Universal JCAMP-DX loader.
+    Minimal JCAMP‑DX loader for ChemWorkBench v2.2.
 
-    Parses JCAMP files into:
-        {
-            "metadata": {...},
-            "x": [...],
-            "y": [...],
-        }
+    Responsibilities
+    ----------------
+    • Read raw JCAMP text
+    • Extract minimal metadata (##TITLE, ##DATA TYPE)
+    • Extract paired x/y data lines
+    • Produce a universal structure for the ingestion engine
 
-    This loader is intentionally minimal and technique-agnostic.
+    Non‑Responsibilities
+    --------------------
+    • Technique inference
+    • Multi‑block JCAMP parsing
+    • Vendor‑specific JCAMP extensions
     """
 
     VENDOR = "universal"
     FORMAT = "jcamp"
     EXTENSIONS = (".jdx", ".dx")
 
+    # ------------------------------------------------------------------
+    # Sniff
+    # ------------------------------------------------------------------
     def sniff(self, path: Path) -> bool:
-        return path.suffix.lower() in {".jdx", ".dx"}
+        return path.suffix.lower() in self.EXTENSIONS
 
-    def load_raw(self, path: Path) -> Any:
+    # ------------------------------------------------------------------
+    # Raw read
+    # ------------------------------------------------------------------
+    def load_raw(self, path: Path) -> str:
         try:
-            metadata = {}
+            return Path(path).read_text(encoding="utf-8", errors="ignore")
+        except Exception as exc:
+            raise LoaderReadError(f"Failed to read JCAMP file '{path}': {exc}") from exc
+
+    # ------------------------------------------------------------------
+    # Metadata extraction
+    # ------------------------------------------------------------------
+    def extract_metadata(self, raw: str) -> Mapping[str, Any]:
+        try:
+            meta: Dict[str, Any] = {}
+            for line in raw.splitlines():
+                line = line.strip()
+                if line.startswith("##TITLE="):
+                    meta["title"] = line.split("=", 1)[1].strip()
+                elif line.startswith("##DATA TYPE="):
+                    meta["data_type"] = line.split("=", 1)[1].strip()
+            return meta
+        except Exception as exc:
+            raise LoaderMetadataError(f"Failed to extract JCAMP metadata: {exc}") from exc
+
+    # ------------------------------------------------------------------
+    # Universal conversion
+    # ------------------------------------------------------------------
+    def to_universal(self, raw: str, metadata: Mapping[str, Any]) -> Dict[str, Any]:
+        try:
             x_vals = []
             y_vals = []
 
-            with path.open("r", encoding="utf-8", errors="ignore") as f:
-                for line in f:
-                    line = line.strip()
+            for line in raw.splitlines():
+                line = line.strip()
+                if not line or line.startswith("##"):
+                    continue
 
-                    # Metadata lines: ##KEY=VALUE
-                    if line.startswith("##") and "=" in line:
-                        key, value = line[2:].split("=", 1)
-                        metadata[key.strip().lower()] = value.strip()
+                parts = line.replace(",", " ").split()
+                if len(parts) == 2:
+                    try:
+                        xv = float(parts[0])
+                        yv = float(parts[1])
+                        x_vals.append(xv)
+                        y_vals.append(yv)
+                    except ValueError:
                         continue
 
-                    # Data lines: x y
-                    if line and not line.startswith("##"):
-                        parts = line.split()
-                        if len(parts) == 2:
-                            try:
-                                x_vals.append(float(parts[0]))
-                                y_vals.append(float(parts[1]))
-                            except ValueError:
-                                pass
-
             return {
-                "metadata": metadata,
                 "x": x_vals,
                 "y": y_vals,
+                "label": metadata.get("title", "JCAMP Spectrum"),
             }
 
-        except Exception as exc:
-            raise LoaderReadError(
-                f"Failed to read JCAMP file '{path}': {exc}"
-            ) from exc
-
-    def extract_metadata(self, raw_data: Any) -> Mapping[str, Any]:
-        try:
-            md = raw_data.get("metadata", {})
-            return {
-                "format": self.FORMAT,
-                "title": md.get("title"),
-                "owner": md.get("owner"),
-                "origin": md.get("origin"),
-                "num_points": len(raw_data.get("x", [])),
-            }
-        except Exception as exc:
-            raise LoaderMetadataError(
-                f"Failed to extract JCAMP metadata: {exc}"
-            ) from exc
-
-    def to_universal(self, raw_data: Any, metadata: Mapping[str, Any]) -> Any:
-        try:
-            return {
-                "x": raw_data["x"],
-                "y": raw_data["y"],
-                "metadata": raw_data["metadata"],
-            }
         except Exception as exc:
             raise LoaderNormalizationError(
                 f"Failed to normalize JCAMP data: {exc}"
